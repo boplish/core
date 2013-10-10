@@ -1,6 +1,7 @@
-BOPlishClient = function() {
+BOPlishClient = function(bootstrapHost) {
     this.id = sha1.hash(Math.random().toString());
-    var channel = new WebSocket('ws://' + window.location.host + '/ws/' + this.id);
+    var bootstrap = bootstrapHost || window.location.host;
+    var channel = new WebSocket('ws://' + bootstrap + '/ws/' + this.id);
     this._connectionManager = new ConnectionManager();
     this._router = new Router(this.id, channel, this._connectionManager);
     channel.onopen = function() {
