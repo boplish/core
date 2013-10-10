@@ -9,6 +9,10 @@ connection maintenance and routing.
 For some demo applications using BOPlish refer to
     [https://github.com/boplish/demos/](https://github.com/boplish/demos/).
 
+This library currently only works on Firefox since DataChannel interoperation
+between Firefox and Chrome doesn't work, yet. For interop progress have a look
+at https://code.google.com/p/webrtc/issues/detail?id=2279.
+
 Requirements
 ============
 

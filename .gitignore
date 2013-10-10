@@ -1,3 +1,9 @@
+# virtualenv stuff
+/bin
+/include
+/lib
+/local
+
 /node_modules/
 /dist/
 /doc/
