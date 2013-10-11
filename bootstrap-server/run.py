@@ -54,7 +54,7 @@ def ws(username):
     while True:
         raw_msg = socket.receive()
         if raw_msg is None:
-            print "disconnecting {}".format(username)
+            print "disconnecting {0}".format(username)
             del users[username]
             return Response()
         message = json.loads(raw_msg)
