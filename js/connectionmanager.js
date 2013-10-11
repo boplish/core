@@ -24,6 +24,9 @@ ConnectionManager = function() {
 ConnectionManager.prototype = {
 
     utils: {
+        /**
+         * Returns a list of field values of the given field in the given SDP.
+         */
         findInSDP: function(sdp, field) {
             var result = [];
             sdp.split('\r\n').forEach(function(line) {
@@ -34,6 +37,10 @@ ConnectionManager.prototype = {
             return result;
         },
 
+        /**
+         * Returns the session ID contained in the given SDP. This ID is used
+         * for glare handling.
+         */
         findSessionId: function(sdp) {
             return parseInt(this.findInSDP(sdp, "o")[0].split(" ")[1], 10);
         },
@@ -109,11 +116,13 @@ ConnectionManager.prototype = {
     },
 
     _onCreateOfferError: function(errorCallback, error) {
+        // TODO(max): clean up state (delete PC object etc.)
         errorCallback(error);
     },
 
     _onReceiveAnswer: function(msg, from) {
         if(this._state === 'bootstrapping') {
+            // TODO(max): check if we actually have a pending PC
             this._bootstrap.pc.setRemoteDescription(new RTCSessionDescription(msg.answer));
             this._bootstrap.dc.onopen = function(ev) {
                 this._router.addPeer(new Peer(from, this._bootstrap.pc, this._bootstrap.dc));
@@ -130,6 +139,8 @@ ConnectionManager.prototype = {
                 var peer = new Peer(from, pending.pc, ev.target);
                 this._router.addPeer(peer);
                 if(typeof(pending.onsuccess) === 'function') {
+                    // TODO(max): would it make sense to pass the remote peer's
+                    // ID to the handler?
                     pending.onsuccess();
                 }
                 delete this._pending[from];
