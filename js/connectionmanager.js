@@ -127,6 +127,7 @@ ConnectionManager.prototype = {
             this._bootstrap.dc.onopen = function(ev) {
                 this._router.addPeer(new Peer(from, this._bootstrap.pc, this._bootstrap.dc));
                 this._state = 'ready';
+                this._bootstrap.onsuccess();
                 this._bootstrap = null;
             }.bind(this);
         } else {
@@ -188,7 +189,6 @@ ConnectionManager.prototype = {
                     this._bootstrap = null;
                 }.bind(this);
             }.bind(this);
-                    console.log("creating answer");
             this._bootstrap.pc.createAnswer(this._onCreateAnswerSuccess.bind(this, from, this._bootstrap.pc), this._onCreateAnswerError.bind(this));
         } else {
             var pendingOffer = this._pending[from];
