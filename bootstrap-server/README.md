@@ -33,5 +33,6 @@ the bootstrap server):
     ... clone the demos repo here ...
 
 When the server is running you'll be able to run the demos by e.g. pointing your
-browser to http://localhost:5000/static/demos/icnp13/client.html for the 
-demos we presented at ICNP 2013.
+browser to 
+[http://localhost:5000/static/demos/icnp13/client.html](http://localhost:5000/static/demos/icnp13/client.html)
+for the demos we presented at ICNP 2013.
