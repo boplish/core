@@ -42,5 +42,6 @@ module.exports = function(grunt) {
     grunt.loadNpmTasks('grunt-contrib-uglify');
     grunt.loadNpmTasks('grunt-simple-mocha');
     grunt.registerTask('test', 'simplemocha');
+    grunt.registerTask('dist', 'uglify');
     grunt.registerTask('default', ['jsdoc', 'jshint', 'simplemocha', 'uglify']);
 };
