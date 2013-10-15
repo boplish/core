@@ -24,6 +24,17 @@ describe('Router', function(){
             router.should.have.property('_peerTable');
             Object.keys(router._peerTable).should.have.length(1);
         });
+        it('should discover neighbors from 1st peer', function(){
+            var router = new Router('1', {});
+            var dc = new DataChannel();
+            var stub = sinon.stub(dc, 'send');
+            var peer1 = new Peer('2', sinon.stub(new RTCPeerConnection()), dc);
+            var peer2 = new Peer('3', sinon.stub(new RTCPeerConnection()), sinon.stub(new DataChannel()));
+            router.addPeer(peer1);
+            router.addPeer(peer2);
+
+            sinon.assert.calledOnce(stub);
+        });
     });
     describe('#getPeerIds()', function(){
         it('should return a list of all peer ids in the routing table', function(){
@@ -91,16 +102,9 @@ describe('Router', function(){
             sinon.assert.calledTwice(stub);
         });
     });
-});
-/*
-
-
-
-
-    });
     describe('#deliver()', function(){
         it('should be called when an incoming message is directed to this peer', function(done) {
-            var router = new Router();
+            var router = new Router('1', {});
             var spy = sinon.spy(router, 'deliver');
             var testMsg = {
                 data: 'test'
@@ -108,17 +112,17 @@ describe('Router', function(){
             router.registerDeliveryCallback('test', function(msg){
                 sinon.assert.calledOnce(spy);
                 sinon.assert.calledWith(spy, {
-                    from: router.id,
-                    to: router.id,
+                    from: router._id,
+                    to: router._id,
                     type: 'test',
                     payload: msg
                 });
                 done();
             });
-            router.route(router.id, 'test', testMsg);
+            router.route(router._id, 'test', testMsg);
         });
         it('should be able to determine the type of a incoming message and forward to the corresponding callback', function(done){
-            var router = new Router();
+            var router = new Router('1', {});
             var spy = sinon.spy(router, 'deliver');
             var testMsg1 = {
                 data: 'an offer message'
@@ -129,8 +133,8 @@ describe('Router', function(){
             router.registerDeliveryCallback('offer', function(msg){
                 sinon.assert.callCount(spy, 1);
                 sinon.assert.calledWith(spy, {
-                    from: router.id,
-                    to: router.id,
+                    from: router._id,
+                    to: router._id,
                     payload: msg,
                     type: 'offer'
                 });
@@ -138,53 +142,38 @@ describe('Router', function(){
             router.registerDeliveryCallback('discovery', function(msg){
                 sinon.assert.callCount(spy, 2);
                 sinon.assert.calledWith(spy, {
-                    from: router.id,
-                    to: router.id,
+                    from: router._id,
+                    to: router._id,
                     type: 'discovery',
                     payload: msg
                 });
                 done();
             });
-            router.route(router.id, 'offer', testMsg1);
-            router.route(router.id, 'discovery', testMsg2);
+            router.route(router._id, 'offer', testMsg1);
+            router.route(router._id, 'discovery', testMsg2);
         });
     });
-    describe('#discoverNeighbours()', function(){
-        it('should send a message through the dataChannel of the connected peer', function(){
-            var router = new Router();
-            var dc = new DataChannel();
-            var stub = sinon.stub(dc, 'send');
-            var peer1 = new Peer('2', sinon.stub(new RTCPeerConnection()), dc);
-            var peer2 = new Peer('3', sinon.stub(new RTCPeerConnection()), sinon.stub(new DataChannel()));
-            router.addPeer(peer1);
-            router.addPeer(peer2);
-
-            router.discoverNeighbours(peer1);
-
-            sinon.assert.calledOnce(stub);
-        });
+    describe('#neighbor discovery', function(){
         it('should call the answer callback when an discovery answer is received', function(){
-            var router = new Router();
-            var stub = sinon.stub(router.messageCallbacks, 'discovery-answer');
+            var router = new Router('1', {});
+            var stub = sinon.stub(router._messageCallbacks, 'discovery-answer');
             var fakeDiscoveryAnswerMessage = {
                 payload: {ids:[0,1]}
             };
-
-            router.route(router.id, 'discovery-answer', fakeDiscoveryAnswerMessage);
+            router.route(router._id, 'discovery-answer', fakeDiscoveryAnswerMessage);
 
             sinon.assert.calledOnce(stub);
             sinon.assert.calledWith(stub, fakeDiscoveryAnswerMessage);
         });
-        it('should call an error callback when no answer is received in time');
         it('should call the request callback when an request message is received', function(){
-            var router = new Router();
-            var stub = sinon.stub(router.messageCallbacks, 'discovery-request');
+            var router = new Router('1', {});
+            var stub = sinon.stub(router._messageCallbacks, 'discovery-request');
 
-            router.route(router.id, 'discovery-request', '');
+            router.route(router._id, 'discovery-request', '');
 
             sinon.assert.calledOnce(stub);
             sinon.assert.calledWith(stub, '');
         });
+        it('should call an error callback when no answer is received in time');
     });
 });
-*/
