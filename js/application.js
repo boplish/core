@@ -18,8 +18,8 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     bootstrapHost = bootstrapHost || window.location.host;
 
     var channel = new WebSocket('ws://' + bootstrapHost + '/ws/' + this.id);
-    channel.onerror = function() {
-        errorCallback();
+    channel.onerror = function(err) {
+        errorCallback(err);
     };
     channel.onopen = function() {
         this._connectionManager.bootstrap(this._router, successCallback, errorCallback);
