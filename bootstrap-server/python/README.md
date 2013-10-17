@@ -1,7 +1,7 @@
-Simple BOPlish Signaling Server
+Python BOPlish Signaling Server
 ===============================
 
-This is a very simple of a signaling server needed by BOPlish applications for
+This is a simple implementation of a signaling server needed by BOPlish applications for
 joining the P2P network.
 
 Requirements
@@ -24,7 +24,7 @@ From inside this directory issue the following commands:
 The server is now up and serving bootstrap WebSocket connections on port 5000.
 
 For deploying the [BOPlish demos](https://github.com/boplish/demos/) to this
-server do the following (assuming that BOOTSTRAP_SERVER points to the folder of
+server do the following (assuming that `BOOTSTRAP_SERVER` points to the folder of
 the bootstrap server):
 
     $ cd $BOOTSTRAP_SERVER
