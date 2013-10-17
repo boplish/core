@@ -8,11 +8,12 @@ var fs = require('fs');
  * @constructor
  * @param port {Number} Port this server shall listen on
  */
-BootstrapServer = function(port) {
+BootstrapServer = function(hostname, port) {
     if(!(this instanceof BootstrapServer)) {
         return new BootstrapServer();
     }
     this._port = port;
+    this._hostname = hostname;
     this._users = {};
     this._httpServer = null;
     this._websocketServer = null;
@@ -27,13 +28,13 @@ BootstrapServer.prototype = {
      */
     listen: function(successCallback) {
         this._httpServer = http.createServer(this._onHttpRequest.bind(this));
-        this._httpServer.listen(this._port, successCallback);
+        this._httpServer.listen(this._port, this._hostname, successCallback);
         this._websocketServer = new WebSocketServer({
             httpServer: this._httpServer,
             autoAcceptConnections: false
         });
         this._websocketServer.on('request', this._onWebSocketRequest.bind(this));
-        console.log((new Date()) + ' BootstrapServer listening on port ' + this._port);
+        console.log((new Date()) + ' BootstrapServer listening on ' + this._hostname + ':' + this._port);
     },
 
     /**
@@ -128,16 +129,17 @@ BootstrapServer.prototype = {
             // random receiver (inital offer)
             for (user in this._users) {
                 if (Math.random() < 1/++count && user !== msg.from) {
-                    console.log((new Date()) + ' Sending offer to: ' + user);
+                    console.log((new Date()) + ' Sending offer from: ' + msg.from + ' to: ' + user);
                     msg.to = user;
                     receiver = this._users[user];
+                    break;
                 }
             }
         }
         try {
             receiver.send(JSON.stringify(msg));
         } catch (e) {
-            console.log((new Date()) + ' Cannot send offer to ' + msg.to + ' because the WebSocket connection failed: ' + e);
+            console.log((new Date()) + ' Could not send offer to ' + msg.to + ' because the WebSocket connection failed: ' + e);
         }
     },
 
@@ -149,10 +151,11 @@ BootstrapServer.prototype = {
      */
     _handleAnswer: function(msg) {
         var receiver = this._users[msg.to];
-        if (this._users[msg.to]) {
+        try {
+            console.log((new Date()) + ' Sending answer from: ' + msg.from + ' to: ' + msg.to);
             this._users[msg.to].send(JSON.stringify(msg));
-        } else {
-            console.log((new Date()) + ' Unknown receiver: ' + msg.to);
+        } catch(e) {
+            console.log((new Date()) + ' Could not send offer to ' + msg.to + ' because the WebSocket connection failed: ' + e);
         }
     },
 

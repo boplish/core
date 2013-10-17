@@ -15,8 +15,9 @@ describe('BoostrapServer', function(){
     });
     describe('#listen()', function(){
         it('should listen on given port and let client connect', function(done){
+            var host = '0.0.0.0';
             var port = 61232;
-            var server = new BootstrapServer(port);
+            var server = new BootstrapServer(host, port);
             server.listen();
             var client = new WebSocketClient();
             client.on('connect', function(){
@@ -27,8 +28,9 @@ describe('BoostrapServer', function(){
             client.connect('ws://localhost:' + port + '/ws/myid');
         });
         it('should reject clients that use malformed requests', function(done){
+            var host = '0.0.0.0';
             var port = 61232;
-            var server = new BootstrapServer(port);
+            var server = new BootstrapServer(host, port);
             server.listen();
             var client = new WebSocketClient();
             client.on('connectFailed', function(errorDescription){
@@ -39,8 +41,9 @@ describe('BoostrapServer', function(){
             client.connect('ws://localhost:' + port + '/abc');
         });
         it('should add a user on connect and remove on disconnect', function(done){
+            var host = '0.0.0.0';
             var port = 61232;
-            var server = new BootstrapServer(port);
+            var server = new BootstrapServer(host, port);
             server.listen();
 
             var client = new WebSocketClient();
@@ -57,8 +60,9 @@ describe('BoostrapServer', function(){
             client.connect('ws://localhost:' + port + '/ws/myid');
         });
         it('should relay messages between two users', function(done){
+            var host = '0.0.0.0';
             var port = 61232;
-            var server = new BootstrapServer(port);
+            var server = new BootstrapServer(host, port);
             server.listen();
 
             var client1 = new WebSocketClient();
@@ -84,8 +88,9 @@ describe('BoostrapServer', function(){
             client2.connect('ws://localhost:' + port + '/ws/client2');
         });
         it('should route offer to correct peer', function(done){
+            var host = '0.0.0.0';
             var port = 61232;
-            var server = new BootstrapServer(port);
+            var server = new BootstrapServer(host, port);
             server.listen();
 
             var client1 = new WebSocketClient();
@@ -112,8 +117,9 @@ describe('BoostrapServer', function(){
             client2.connect('ws://localhost:' + port + '/ws/client2');
         });
         it('should route answer to correct peer', function(done){
+            var host = '0.0.0.0';
             var port = 61232;
-            var server = new BootstrapServer(port);
+            var server = new BootstrapServer(host, port);
             server.listen();
 
             var client1 = new WebSocketClient();

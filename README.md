@@ -34,7 +34,11 @@ HTML page.
 Bootstrap server
 ================
 
-In [bootstrap-server](bootstrap-server) you will find a simple implementation of
-the bootstrap signaling protocol that BOPlish mandates. This is a Flask
-application with a single WebSocket endpoint for every peer in the BOPlish P2P
-network.
+In [bootstrap-server](bootstrap-server) you will find two sample implementations of
+the bootstrap signaling protocol that BOPlish mandates. This is 
+
+* a Flask application using Python
+* a Node.js application using Javascript
+
+The bootstrap server holds WebSocket connections to existing peers in the boplish network in
+order to help joining peers find initial neighbours.
