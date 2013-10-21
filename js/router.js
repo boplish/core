@@ -180,7 +180,6 @@ Router.prototype = {
      * @todo should this call the connection manager?
      */
     onDiscoveryAnswerMessage: function(msg, from) {
-        var remoteIds = msg.payload;
         var i;
         for(i = 0; i < msg.length; i++) {
             if(msg[i] !== this._id) {
