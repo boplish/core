@@ -21,9 +21,10 @@ def handle_offer(socket, offer):
         socket.send(
             json.dumps(
                 {
-                    "type": "denied",
+                    "type": "roap-protocol",
                     "to": offer["from"],
-                    "from": "signaling-server"
+                    "from": "signaling-server",
+                    "payload": {"type": "denied"}
                 }
             )
         )
@@ -59,11 +60,11 @@ def ws(username):
             return Response()
         message = json.loads(raw_msg)
         print message
-        if message["type"] == "offer":
+        if message["payload"]["type"] == "offer":
             handle_offer(socket, message)
-        if message["type"] == "answer":
+        if message["payload"]["type"] == "answer":
             handle_answer(socket, message)
-        if message["type"] == "ping":
+        if message["payload"]["type"] == "ping":
             socket.send("pong")
 
 

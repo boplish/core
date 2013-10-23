@@ -27,9 +27,7 @@ describe('ConnectionManager', function(){
             var cm = new ConnectionManager();
 
             var mockRouter = sinon.mock(RouterAPI);
-            mockRouter.expects("registerDeliveryCallback").withArgs('offer');
-            mockRouter.expects("registerDeliveryCallback").withArgs('answer');
-            mockRouter.expects("registerDeliveryCallback").withArgs('denied');
+            mockRouter.expects("registerDeliveryCallback").withArgs('roap-protocol');
             cm.bootstrap(RouterAPI);
             mockRouter.restore();
         });
@@ -45,9 +43,9 @@ describe('ConnectionManager', function(){
                 registerDeliveryCallback: function() {},
                 route: function(to, type, msg) {
                     assert.not.exist(to);
-                    type.should.equal('offer');
-                    msg.should.have.property('offer');
-                    msg.offer.should.have.property('sdp');
+                    type.should.equal('roap-protocol');
+                    msg.should.have.property('type', 'offer');
+                    msg.should.have.property('sdp');
                     done();
                 }
             };

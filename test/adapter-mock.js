@@ -26,10 +26,10 @@ RTCPeerConnection.prototype = {
   remote: null,
   createDataChannelOnConnectLabel: null,
   createOffer: function(cb_success, cb_error) {
-    cb_success({obj: this, sdp: "o=UA " + Math.floor(Math.random()*100)});
+    cb_success({obj: this, type: 'offer', sdp: "o=UA " + Math.floor(Math.random()*100)});
   },
   createAnswer: function(cb_success, cb_error) {
-    cb_success({obj: this, sdp: "o=UA " + Math.floor(Math.random()*100)});
+    cb_success({obj: this, type: 'answer', sdp: "o=UA " + Math.floor(Math.random()*100)});
   },
   setLocalDescription: function(sdp_description, cb_success, cb_error) {
     if (cb_success) {
@@ -111,7 +111,7 @@ MockSignalingChannel = function(denied) {
     this.denied = denied;
 };
 MockSignalingChannel.prototype.send = function(data) {
-    switch(data.type) {
+    switch(data.payload.type) {
         case 'offer':
             if (this.denied) {
                 this.onmessage({data: '{"from": "'+data.from+'", "type": "denied"}'});
@@ -139,7 +139,7 @@ MockRouter.prototype = {
         this.signalingChannel.send({from: this.id, type: type, payload: payload});
     },
     onmessage: function(msg) {
-        var packet = msg.data;
+        var packet = msg.payload;
         console.log(packet.type);
         this.callbacks[packet.type](packet.from, packet.payload);
     },
