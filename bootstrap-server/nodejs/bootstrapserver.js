@@ -92,6 +92,10 @@ BootstrapServer.prototype = {
             console.log((new Date()) + ' Could not parse incoming message: ' + rawMsg.utf8Data + ' ' + e);
             return;
         }
+        if (typeof(msg.payload) === 'undefined' || msg.payload === null) {
+            console.log((new Date()) + ' Discarding message: ' + JSON.stringify(msg) + ' because it does not carry any payload');
+            return;
+        }
         switch (msg.payload.type) {
             case 'offer':
                 this._handleOffer(msg);
