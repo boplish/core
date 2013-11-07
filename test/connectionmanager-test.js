@@ -27,7 +27,7 @@ describe('ConnectionManager', function(){
             var cm = new ConnectionManager();
 
             var mockRouter = sinon.mock(RouterAPI);
-            mockRouter.expects("registerDeliveryCallback").withArgs('roap-protocol');
+            mockRouter.expects("registerDeliveryCallback").withArgs('signaling-protocol');
             cm.bootstrap(RouterAPI);
             mockRouter.restore();
         });
@@ -43,7 +43,7 @@ describe('ConnectionManager', function(){
                 registerDeliveryCallback: function() {},
                 route: function(to, type, msg) {
                     assert.not.exist(to);
-                    type.should.equal('roap-protocol');
+                    type.should.equal('signaling-protocol');
                     msg.should.have.property('type', 'offer');
                     msg.should.have.property('sdp');
                     done();

@@ -120,7 +120,7 @@ BootstrapServer.prototype = {
         if (Object.keys(this._users).length <= 1 || (msg.to && !this._users[msg.to])) {
             // denied
             this._users[msg.from].send(JSON.stringify({
-                type: 'roap-protocol',
+                type: 'signaling-protocol',
                 to: msg.from,
                 from: 'signaling-server',
                 payload: {type: 'denied'}

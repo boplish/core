@@ -70,7 +70,7 @@ ConnectionManager.prototype = {
             onsuccess: successCallback,
             onerror: errorCallback,
         };
-        router.registerDeliveryCallback('roap-protocol', this._onMessage.bind(this));
+        router.registerDeliveryCallback('signaling-protocol', this._onMessage.bind(this));
         pc.createOffer(this._onCreateOfferSuccess.bind(this, pc, null, this._bootstrap),
                        this._onCreateOfferError.bind(this, errorCallback));
     },
@@ -110,7 +110,7 @@ ConnectionManager.prototype = {
         }
         pc.setLocalDescription(sessionDesc);
         pendingOffer.offerId = this.utils.findSessionId(sessionDesc.sdp);
-        this._router.route(to, 'roap-protocol', sessionDesc);
+        this._router.route(to, 'signaling-protocol', sessionDesc);
     },
 
     _onCreateOfferError: function(errorCallback, error) {
@@ -168,7 +168,7 @@ ConnectionManager.prototype = {
         // if we're already connected or are already processing an offer from
         // this peer, deny this offer
         if(this._connections[from] !== undefined || this._pending[from] !== undefined) {
-            this._router.route(from, 'roap-protocol', {type: 'denied'});
+            this._router.route(from, 'signaling-protocol', {type: 'denied'});
         }
 
         var offerId = this.utils.findSessionId(desc.sdp);
@@ -242,7 +242,7 @@ ConnectionManager.prototype = {
 
     _onCreateAnswerSuccess: function(to, pc, sessionDesc) {
         pc.setLocalDescription(new RTCSessionDescription(sessionDesc));
-        this._router.route(to, 'roap-protocol', sessionDesc);
+        this._router.route(to, 'signaling-protocol', sessionDesc);
     },
 
     _onCreateAnswerError: function(error) {

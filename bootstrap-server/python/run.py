@@ -21,7 +21,7 @@ def handle_offer(socket, offer):
         socket.send(
             json.dumps(
                 {
-                    "type": "roap-protocol",
+                    "type": "signaling-protocol",
                     "to": offer["from"],
                     "from": "signaling-server",
                     "payload": {"type": "denied"}
