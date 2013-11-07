@@ -78,9 +78,10 @@ describe('BoostrapServer', function(){
             });
             client2.on('connect', function(conn){
                 conn.send(JSON.stringify({
-                    type: 'answer',
+                    type: 'signaling-protocol',
                     from: 'client2',
-                    to: 'client1'
+                    to: 'client1',
+                    payload: {type: 'answer'}
                 }));
             });
 
@@ -98,7 +99,9 @@ describe('BoostrapServer', function(){
             client1.on('connect', function(conn){
                 conn.on('message', function(rawMsg){
                     var msg = JSON.parse(rawMsg.utf8Data);
-                    msg.should.have.property('type', 'offer');
+                    msg.should.have.property('type', 'signaling-protocol');
+                    msg.should.have.property('payload');
+                    msg.payload.should.have.property('type', 'offer');
                     msg.should.have.property('to', 'client1');
                     msg.should.have.property('from', 'client2');
                     server.close();
@@ -107,9 +110,10 @@ describe('BoostrapServer', function(){
             });
             client2.on('connect', function(conn){
                 conn.send(JSON.stringify({
-                    type: 'offer',
+                    type: 'signaling-protocol',
                     from: 'client2',
-                    to: ''
+                    to: '',
+                    payload: {type: 'offer'}
                 }));
             });
 
@@ -127,7 +131,8 @@ describe('BoostrapServer', function(){
             client1.on('connect', function(conn){
                 conn.on('message', function(rawMsg){
                     var msg = JSON.parse(rawMsg.utf8Data);
-                    msg.should.have.property('type', 'answer');
+                    msg.should.have.property('type', 'signaling-protocol');
+                    msg.payload.should.have.property('type', 'answer');
                     msg.should.have.property('to', 'client1');
                     msg.should.have.property('from', 'client2');
                     server.close();
@@ -136,9 +141,10 @@ describe('BoostrapServer', function(){
             });
             client2.on('connect', function(conn){
                 conn.send(JSON.stringify({
-                    type: 'answer',
+                    type: 'signaling-protocol',
                     from: 'client2',
-                    to: 'client1'
+                    to: 'client1',
+                    payload: {type: 'answer'}
                 }));
             });
 

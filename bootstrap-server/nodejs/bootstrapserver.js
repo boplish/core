@@ -92,7 +92,11 @@ BootstrapServer.prototype = {
             console.log((new Date()) + ' Could not parse incoming message: ' + rawMsg.utf8Data + ' ' + e);
             return;
         }
-        switch (msg.type) {
+        if (typeof(msg.payload) === 'undefined' || msg.payload === null) {
+            console.log((new Date()) + ' Discarding message: ' + JSON.stringify(msg) + ' because it does not carry any payload');
+            return;
+        }
+        switch (msg.payload.type) {
             case 'offer':
                 this._handleOffer(msg);
                 break;
@@ -100,7 +104,7 @@ BootstrapServer.prototype = {
                 this._handleAnswer(msg);
                 break;
             default:
-                console.log((new Date()) + ' Discarding message: ' + msg + ' because the type is unknown');
+                console.log((new Date()) + ' Discarding message: ' + JSON.stringify(msg) + ' because the type is unknown');
         }
     },
 
@@ -116,9 +120,10 @@ BootstrapServer.prototype = {
         if (Object.keys(this._users).length <= 1 || (msg.to && !this._users[msg.to])) {
             // denied
             this._users[msg.from].send(JSON.stringify({
-                type: 'denied',
+                type: 'signaling-protocol',
                 to: msg.from,
-                from: 'signaling-server'
+                from: 'signaling-server',
+                payload: {type: 'denied'}
             }));
             return;
         }

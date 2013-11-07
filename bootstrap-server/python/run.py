@@ -21,9 +21,10 @@ def handle_offer(socket, offer):
         socket.send(
             json.dumps(
                 {
-                    "type": "denied",
+                    "type": "signaling-protocol",
                     "to": offer["from"],
-                    "from": "signaling-server"
+                    "from": "signaling-server",
+                    "payload": {"type": "denied"}
                 }
             )
         )
@@ -59,12 +60,14 @@ def ws(username):
             return Response()
         message = json.loads(raw_msg)
         print message
-        if message["type"] == "offer":
+        if not message["type"] == "signaling-protocol":
+            print "Discarding message because it is not a valid signaling-protocol message"
+            return ""
+        if message["payload"] and message["payload"]["type"] == "offer":
             handle_offer(socket, message)
-        if message["type"] == "answer":
+        elif message["payload"] and message["payload"]["type"] == "answer":
             handle_answer(socket, message)
-        if message["type"] == "ping":
-            socket.send("pong")
+
 
 
 if __name__ == '__main__':

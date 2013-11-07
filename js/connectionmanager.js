@@ -70,9 +70,7 @@ ConnectionManager.prototype = {
             onsuccess: successCallback,
             onerror: errorCallback,
         };
-        router.registerDeliveryCallback('offer', this._onReceiveOffer.bind(this));
-        router.registerDeliveryCallback('answer', this._onReceiveAnswer.bind(this));
-        router.registerDeliveryCallback('denied', this._onOfferDenied.bind(this));
+        router.registerDeliveryCallback('signaling-protocol', this._onMessage.bind(this));
         pc.createOffer(this._onCreateOfferSuccess.bind(this, pc, null, this._bootstrap),
                        this._onCreateOfferError.bind(this, errorCallback));
     },
@@ -112,7 +110,7 @@ ConnectionManager.prototype = {
         }
         pc.setLocalDescription(sessionDesc);
         pendingOffer.offerId = this.utils.findSessionId(sessionDesc.sdp);
-        this._router.route(to, 'offer', {offer: sessionDesc});
+        this._router.route(to, 'signaling-protocol', sessionDesc);
     },
 
     _onCreateOfferError: function(errorCallback, error) {
@@ -120,10 +118,26 @@ ConnectionManager.prototype = {
         errorCallback(error);
     },
 
-    _onReceiveAnswer: function(msg, from) {
+    _onMessage: function(msg, from) {
+        switch(msg.type) {
+            case 'offer':
+                this._onReceiveOffer(msg, from);
+                break;
+            case 'answer':
+                this._onReceiveAnswer(msg, from);
+                break;
+            case 'denied':
+                this._onOfferDenied(msg, from);
+                break;
+            default:
+                console.log('ConnectionManager: Discarding JSEP message because the type is unknown: ' + JSON.stringify(msg));
+        }
+    },
+
+    _onReceiveAnswer: function(desc, from) {
         if(this._state === 'bootstrapping') {
             // TODO(max): check if we actually have a pending PC
-            this._bootstrap.pc.setRemoteDescription(new RTCSessionDescription(msg.answer));
+            this._bootstrap.pc.setRemoteDescription(new RTCSessionDescription(desc));
             this._bootstrap.dc.onopen = function(ev) {
                 this._router.addPeer(new Peer(from, this._bootstrap.pc, this._bootstrap.dc));
                 this._state = 'ready';
@@ -135,7 +149,7 @@ ConnectionManager.prototype = {
             if(pending === undefined) {
                 return; // we haven't offered to this node, silently discard
             }
-            pending.pc.setRemoteDescription(new RTCSessionDescription(msg.answer));
+            pending.pc.setRemoteDescription(new RTCSessionDescription(desc));
             pending.dc.onopen = function(ev) {
                 var peer = new Peer(from, pending.pc, ev.target);
                 this._router.addPeer(peer);
@@ -150,14 +164,14 @@ ConnectionManager.prototype = {
         }
     },
 
-    _onReceiveOffer: function(msg, from) {
+    _onReceiveOffer: function(desc, from) {
         // if we're already connected or are already processing an offer from
         // this peer, deny this offer
         if(this._connections[from] !== undefined || this._pending[from] !== undefined) {
-            this._router.route(from, 'denied', '');
+            this._router.route(from, 'signaling-protocol', {type: 'denied'});
         }
 
-        var offerId = this.utils.findSessionId(msg.offer.sdp);
+        var offerId = this.utils.findSessionId(desc.sdp);
 
         if(this._state === 'bootstrapping') {
             if(this._bootstrap.pc.remoteDescription !== null) {
@@ -178,7 +192,7 @@ ConnectionManager.prototype = {
                 // silently discard this offer
                 return;
             }
-            this._bootstrap.pc.setRemoteDescription(new RTCSessionDescription(msg.offer));
+            this._bootstrap.pc.setRemoteDescription(new RTCSessionDescription(desc));
             this._bootstrap.pc.ondatachannel = function(ev) {
                 ev.channel.onopen = function(ev) {
                     var peer = new Peer(from, this._bootstrap.pc, ev.target);
@@ -208,7 +222,7 @@ ConnectionManager.prototype = {
                 }
             }
             var pc = new RTCPeerConnection(this._pcoptions);
-            pc.setRemoteDescription(new RTCSessionDescription(msg.offer));
+            pc.setRemoteDescription(new RTCSessionDescription(desc));
             this._pending[from] = pendingOffer || {};
             this._pending[from].pc = pc;
             pc.ondatachannel = function(ev) {
@@ -228,7 +242,7 @@ ConnectionManager.prototype = {
 
     _onCreateAnswerSuccess: function(to, pc, sessionDesc) {
         pc.setLocalDescription(new RTCSessionDescription(sessionDesc));
-        this._router.route(to, 'answer', {answer: sessionDesc});
+        this._router.route(to, 'signaling-protocol', sessionDesc);
     },
 
     _onCreateAnswerError: function(error) {
@@ -241,7 +255,7 @@ ConnectionManager.prototype = {
      * just has to sit and wait for an offer. Eventually the successCallback is
      * called.
      */
-    _onOfferDenied: function(msg) {
+    _onOfferDenied: function(desc) {
         if(this._state === 'bootstrapping') {
             this._bootstrap.pc = new RTCPeerConnection(this._pcoptions);
             this._bootstrap.dc = this._bootstrap.pc.createDataChannel(null, {});
