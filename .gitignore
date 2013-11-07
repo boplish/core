@@ -1,11 +1,23 @@
-# virtualenv stuff
-/bin
-/include
-/lib
-/local
+# bootstrap server
 
+## python virtualenv stuff
+/bootstrap-server/python/bin
+/bootstrap-server/python/include
+/bootstrap-server/python/lib
+/bootstrap-server/python/local
+/bootstrap-server/python/.Python
+
+## npm stuff
+/bootstrap-server/nodejs/node_modules/
+
+## static files
+/bootstrap-server/python/static/
+/bootstrap-server/nodejs/static/
+
+# build stuff
 /node_modules/
 /dist/
 /doc/
 *.swp
 *~
+.ftppass
