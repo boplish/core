@@ -136,7 +136,7 @@ ConnectionManager.prototype = {
 
     _onReceiveAnswer: function(desc, from) {
         if(this._state === 'bootstrapping') {
-            // TODO(max): check if we actually have a pending PC
+            // TODO(max): check if we actually have a pending PC and ``drop'' is not set (glare).
             this._bootstrap.pc.setRemoteDescription(new RTCSessionDescription(desc));
             this._bootstrap.dc.onopen = function(ev) {
                 this._router.addPeer(new Peer(from, this._bootstrap.pc, this._bootstrap.dc));
@@ -186,6 +186,7 @@ ConnectionManager.prototype = {
                     onerror: this._bootstrap.onerror,
                 };
                 // cancel all actions on the old object
+                // FIXME(max): setting ``drop'' here makes no sense since it's overwritten in the next line.
                 this._bootstrap.drop = true;
                 this._bootstrap = newBootstrap;
             } else {
