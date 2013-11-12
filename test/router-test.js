@@ -66,7 +66,7 @@ describe('Router', function(){
             var router = new Router('1', {});
             router.registerDeliveryCallback('test', function(){});
             router._messageCallbacks.should.have.property('test');
-            Object.keys(router._messageCallbacks).should.have.length(3);
+            Object.keys(router._messageCallbacks).should.have.length(2);
         });
     });
     describe('#route()', function(){
@@ -156,23 +156,24 @@ describe('Router', function(){
     describe('#neighbor discovery', function(){
         it('should call the answer callback when an discovery answer is received', function(){
             var router = new Router('1', {});
-            var stub = sinon.stub(router._messageCallbacks, 'discovery-answer');
+            var stub = sinon.stub(router._messageCallbacks, 'discovery');
             var fakeDiscoveryAnswerMessage = {
+                type: 'answer',
                 payload: {ids:[0,1]}
             };
-            router.route(router._id, 'discovery-answer', fakeDiscoveryAnswerMessage);
+            router.route(router._id, 'discovery', fakeDiscoveryAnswerMessage);
 
             sinon.assert.calledOnce(stub);
             sinon.assert.calledWith(stub, fakeDiscoveryAnswerMessage);
         });
         it('should call the request callback when an request message is received', function(){
             var router = new Router('1', {});
-            var stub = sinon.stub(router._messageCallbacks, 'discovery-request');
+            var stub = sinon.stub(router._messageCallbacks, 'discovery');
 
-            router.route(router._id, 'discovery-request', '');
+            router.route(router._id, 'discovery', {type: 'request'});
 
             sinon.assert.calledOnce(stub);
-            sinon.assert.calledWith(stub, '');
+            sinon.assert.calledWith(stub, {type: 'request'});
         });
         it('should call an error callback when no answer is received in time');
     });

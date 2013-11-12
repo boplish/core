@@ -20,8 +20,7 @@ Router = function(id, fallbackSignaling, connectionManager) {
     this._id = id;
     this._messageCallbacks = {};
     this._monitorCallback = null;
-    this.registerDeliveryCallback('discovery-answer', this.onDiscoveryAnswerMessage.bind(this));
-    this.registerDeliveryCallback('discovery-request', this.onDiscoveryRequestMessage.bind(this));
+    this.registerDeliveryCallback('discovery', this._onDiscoveryMessage.bind(this));
 
     return this;
 };
@@ -40,7 +39,7 @@ Router.prototype = {
         peer.peerConnection.onclosedconnection = this.removePeer.bind(this, peer);
         if(Object.keys(this._peerTable).length === 1) {
             // ask first peer for its neighbours
-            this.discoverNeighbours(peer);
+            this._discoverNeighbours(peer);
         }
     },
 
@@ -169,8 +168,22 @@ Router.prototype = {
      * @param peer {Peer}
      * @todo implement
      */
-    discoverNeighbours: function(peer) {
-        this.route(peer.id, 'discovery-request', '');
+    _discoverNeighbours: function(peer) {
+        this.route(peer.id, 'discovery', {type: 'request'});
+    },
+
+    _onDiscoveryMessage: function(msg, from) {
+        switch(msg.type) {
+            case 'answer':
+                this._processDiscoveryAnswer(msg, from);
+                break;
+            case 'request':
+                this._processDiscoveryRequest(msg, from);
+                break;
+            default:
+                console.log('Router: received invalid discovery message with type %s from %s', msg.type, from);
+                break;
+        }
     },
 
     /**
@@ -179,11 +192,11 @@ Router.prototype = {
      * @param msg {String} Message containing ids of another peers peer table.
      * @todo should this call the connection manager?
      */
-    onDiscoveryAnswerMessage: function(msg, from) {
-        var i;
-        for(i = 0; i < msg.length; i++) {
-            if(msg[i] !== this._id) {
-                this._connectionManager.connect(msg[i]);
+    _processDiscoveryAnswer: function(msg, from) {
+        var i, ids = msg.ids;
+        for(i = 0; i < ids.length; i++) {
+            if(ids[i] !== this._id) {
+                this._connectionManager.connect(ids[i]);
             }
         }
     },
@@ -195,7 +208,7 @@ Router.prototype = {
      * @param msg {String} Message containing the discovery request from another peer.
      * @todo discovery message format
      */
-    onDiscoveryRequestMessage: function(msg, from) {
+    _processDiscoveryRequest: function(msg, from) {
         var peerIds = [],
         peer;
         for (peer in this._peerTable) {
@@ -203,7 +216,7 @@ Router.prototype = {
                 peerIds.push(peer);
             }
         }
-        this.route(from, 'discovery-answer', peerIds);
+        this.route(from, 'discovery', {type: 'answer', ids: peerIds});
     }
 };
 
