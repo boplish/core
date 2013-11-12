@@ -61,13 +61,13 @@ def ws(username):
         message = json.loads(raw_msg)
         print message
         if not message["type"] == "signaling-protocol":
-            print "Discarding message because it is not a valid signaling-protocol message"
+            print "Discarding message because it is not a valid " +\
+                "signaling-protocol message"
             return ""
         if message["payload"] and message["payload"]["type"] == "offer":
             handle_offer(socket, message)
         elif message["payload"] and message["payload"]["type"] == "answer":
             handle_answer(socket, message)
-
 
 
 if __name__ == '__main__':
