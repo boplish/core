@@ -245,7 +245,6 @@ ConnectionManager.prototype = {
     },
 
     _onCreateAnswerSuccess: function(to, pc, sessionDesc) {
-        pc.setLocalDescription(new RTCSessionDescription(sessionDesc));
         pc.onicecandidate = function(iceEvent) {
             if (pc.iceGatheringState === 'complete' || iceEvent.candidate === null) {
                 // spec specifies that a null candidate means that the ice gathering is complete
@@ -253,6 +252,7 @@ ConnectionManager.prototype = {
                 this._router.route(to, 'signaling-protocol', pc.localDescription);
             }
         }.bind(this);
+        pc.setLocalDescription(new RTCSessionDescription(sessionDesc));
     },
 
     _onCreateAnswerError: function(error) {
