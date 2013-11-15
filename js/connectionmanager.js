@@ -12,9 +12,6 @@ ConnectionManager = function() {
     this._bootstrap = null;
     this._pending = {};
     this._connections = {};
-    this._pcoptions = {
-        //iceServers: [{url: 'stun:127.0.0.1'}]
-    };
     //possible states: 'uninitialized', 'bootstrapping', 'ready'
     this._state = 'uninitialized';
 
@@ -63,7 +60,7 @@ ConnectionManager.prototype = {
         }
         this._state = 'bootstrapping';
         this._router = router;
-        var pc = new RTCPeerConnection(this._pcoptions);
+        var pc = new RTCPeerConnection(null);
         this._bootstrap = {
             pc: pc,
             dc: pc.createDataChannel(null, {}),
@@ -108,9 +105,15 @@ ConnectionManager.prototype = {
         if(pendingOffer.drop) {
             return;
         }
-        pc.setLocalDescription(sessionDesc);
+        pc.onicecandidate = function(iceEvent) {
+            if (pc.iceGatheringState === 'complete' || iceEvent.candidate === null) {
+                // spec specifies that a null candidate means that the ice gathering is complete
+                pc.onicecandidate = function(){};
+                this._router.route(to, 'signaling-protocol', pc.localDescription);
+            }
+        }.bind(this);
         pendingOffer.offerId = this.utils.findSessionId(sessionDesc.sdp);
-        this._router.route(to, 'signaling-protocol', sessionDesc);
+        pc.setLocalDescription(sessionDesc);
     },
 
     _onCreateOfferError: function(errorCallback, error) {
@@ -242,8 +245,14 @@ ConnectionManager.prototype = {
     },
 
     _onCreateAnswerSuccess: function(to, pc, sessionDesc) {
+        pc.onicecandidate = function(iceEvent) {
+            if (pc.iceGatheringState === 'complete' || iceEvent.candidate === null) {
+                // spec specifies that a null candidate means that the ice gathering is complete
+                pc.onicecandidate = function(){};
+                this._router.route(to, 'signaling-protocol', pc.localDescription);
+            }
+        }.bind(this);
         pc.setLocalDescription(new RTCSessionDescription(sessionDesc));
-        this._router.route(to, 'signaling-protocol', sessionDesc);
     },
 
     _onCreateAnswerError: function(error) {

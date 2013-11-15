@@ -25,6 +25,7 @@ RTCPeerConnection.prototype = {
   dataChannels: null,
   remote: null,
   createDataChannelOnConnectLabel: null,
+  onicecandidate: function(){},
   createOffer: function(cb_success, cb_error) {
     cb_success({obj: this, type: 'offer', sdp: "o=UA " + Math.floor(Math.random()*100)});
   },
@@ -32,11 +33,17 @@ RTCPeerConnection.prototype = {
     cb_success({obj: this, type: 'answer', sdp: "o=UA " + Math.floor(Math.random()*100)});
   },
   setLocalDescription: function(sdp_description, cb_success, cb_error) {
+    this.localDescription = {type: sdp_description.type, sdp: sdp_description.sdp};
+
+    this.iceGatheringState = 'complete';
+    this.onicecandidate({candidate:null});
+
     if (cb_success) {
         cb_success();
     }
   },
   setRemoteDescription: function(sdp_description, cb_success, cb_error) {
+    this.remoteDescription = {type: sdp_description.type, sdp: sdp_description.sdp};
     this.remote = sdp_description.obj;
     
     // we are connected, set remote ends on all created DataChannels
