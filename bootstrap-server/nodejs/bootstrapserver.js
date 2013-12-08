@@ -8,12 +8,14 @@ var fs = require('fs');
  * @constructor
  * @param port {Number} Port this server shall listen on
  */
-BootstrapServer = function(hostname, port) {
+BootstrapServer = function(hostname, port, staticPath) {
     if(!(this instanceof BootstrapServer)) {
         return new BootstrapServer();
     }
-    this._port = port;
     this._hostname = hostname;
+    this._port = port;
+    this._staticPath = staticPath || __dirname + '/';
+    console.log(this._staticPath);
     this._users = {};
     this._httpServer = null;
     this._websocketServer = null;
@@ -48,7 +50,7 @@ BootstrapServer.prototype = {
         
         try {
             response.writeHead(200);
-            response.write(fs.readFileSync(__dirname + request.url));
+            response.write(fs.readFileSync(this._staticPath + request.url));
         } catch (e) {
             response.writeHead(404);
             response.write('404 - Not Found');
