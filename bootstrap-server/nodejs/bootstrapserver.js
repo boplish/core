@@ -15,7 +15,6 @@ BootstrapServer = function(hostname, port, staticPath) {
     this._hostname = hostname;
     this._port = port;
     this._staticPath = staticPath || __dirname + '/';
-    console.log(this._staticPath);
     this._users = {};
     this._httpServer = null;
     this._websocketServer = null;
@@ -36,7 +35,7 @@ BootstrapServer.prototype = {
             autoAcceptConnections: false
         });
         this._websocketServer.on('request', this._onWebSocketRequest.bind(this));
-        console.log((new Date()) + ' BootstrapServer listening on ' + this._hostname + ':' + this._port);
+        console.log((new Date()) + ' BootstrapServer listening on ' + this._hostname + ':' + this._port + ', serving from ' + this._staticPath);
     },
 
     /**
@@ -50,7 +49,11 @@ BootstrapServer.prototype = {
         
         try {
             response.writeHead(200);
-            response.write(fs.readFileSync(this._staticPath + request.url));
+            if(request.url === '/') {
+                response.write(fs.readFileSync(this._staticPath + '/index.html'));
+            } else {
+                response.write(fs.readFileSync(this._staticPath + request.url));
+            }
         } catch (e) {
             response.writeHead(404);
             response.write('404 - Not Found');
