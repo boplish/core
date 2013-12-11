@@ -18,12 +18,36 @@ module.exports = function(grunt) {
             all: ["Gruntfile.js", "js/*.js"]
         },
 
-        uglify: {
-            options: {
-                mangle: true,
-                compress: true
+        jsbeautifier: {
+            verify: {
+                src: ['Gruntfile.js', 'js/*.js'],
+                options: {
+                    mode: 'VERIFY_ONLY'
+                }
             },
-            build: {
+            modify: {
+                src: ['Gruntfile.js', 'js/*.js']
+            }
+        },
+
+        uglify: {
+            debug: {
+                options: {
+                    mangle: false,
+                    compress: false,
+                    beautify: true
+                },
+                files: {
+                    'dist/boplish.min.js': ['js/*.js']
+                }
+            },
+            production: {
+                options: {
+                    mangle: true,
+                    compress: true,
+                    beautify: false,
+                    report: 'min'
+                },
                 files: {
                     'dist/boplish.min.js': ['js/*.js']
                 }
@@ -32,12 +56,14 @@ module.exports = function(grunt) {
 
         simplemocha: {
             options: {
-              ignoreLeaks: false,
-              ui: 'bdd',
-              reporter: 'dot'
+                ignoreLeaks: false,
+                ui: 'bdd',
+                reporter: 'dot'
             },
 
-            all: { src: ['test/*-test.js'] }
+            all: {
+                src: ['test/*-test.js']
+            }
         }
 
     });
@@ -45,7 +71,10 @@ module.exports = function(grunt) {
     grunt.loadNpmTasks('grunt-contrib-jshint');
     grunt.loadNpmTasks('grunt-contrib-uglify');
     grunt.loadNpmTasks('grunt-simple-mocha');
+    grunt.loadNpmTasks('grunt-jsbeautifier');
+    grunt.registerTask('beautify', 'jsbeautifier:modify');
+    grunt.registerTask('verify', 'jsbeautifier:verify');
     grunt.registerTask('test', 'simplemocha');
-    grunt.registerTask('dist', 'uglify');
-    grunt.registerTask('default', ['jsdoc', 'jshint', 'simplemocha', 'uglify']);
+    grunt.registerTask('dist', 'uglify:production');
+    grunt.registerTask('default', ['jsdoc', 'jshint', 'simplemocha', 'beautify', 'uglify:production']);
 };
