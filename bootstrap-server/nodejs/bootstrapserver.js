@@ -12,8 +12,8 @@ BootstrapServer = function(hostname, port, staticPath) {
     if(!(this instanceof BootstrapServer)) {
         return new BootstrapServer();
     }
-    this._hostname = hostname;
-    this._port = port;
+    this._hostname = hostname || 'localhost';
+    this._port = port || 3000;
     this._staticPath = staticPath || __dirname + '/';
     this._users = {};
     this._httpServer = null;
