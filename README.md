@@ -26,7 +26,7 @@ JavaScript file run
 
     $ sudo npm install -g grunt-cli
     $ npm install
-    $ grunt uglify
+    $ grunt dist
 
 The library then resides in `dist/boplish.min.js` and can be included in your
 HTML page.
