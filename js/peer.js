@@ -11,7 +11,7 @@
  * @param dataChannel {DataChannel} The DataChannel to the remote peer.
  */
 Peer = function(id, peerConnection, dataChannel) {
-    if(!(this instanceof Peer)) {
+    if (!(this instanceof Peer)) {
         return new Peer(id, peerConnection, dataChannel);
     }
     this.id = id;
@@ -19,6 +19,6 @@ Peer = function(id, peerConnection, dataChannel) {
     this.dataChannel = dataChannel;
 };
 
-if(typeof(module) !== 'undefined') {
+if (typeof(module) !== 'undefined') {
     module.exports = Peer;
 }

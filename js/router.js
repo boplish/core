@@ -6,10 +6,10 @@
  * messages through the user network.
  *
  * @param id ID of the local peer
- * @param fallbackSignaling 
+ * @param fallbackSignaling
  */
 Router = function(id, fallbackSignaling, connectionManager) {
-    if(!(this instanceof Router)) {
+    if (!(this instanceof Router)) {
         return new Router();
     }
 
@@ -37,7 +37,7 @@ Router.prototype = {
         this._peerTable[peer.id] = peer;
         peer.dataChannel.onmessage = this.onmessage.bind(this);
         peer.peerConnection.onclosedconnection = this.removePeer.bind(this, peer);
-        if(Object.keys(this._peerTable).length === 1) {
+        if (Object.keys(this._peerTable).length === 1) {
             // ask first peer for its neighbours
             this._discoverNeighbours(peer);
         }
@@ -72,7 +72,7 @@ Router.prototype = {
     onmessage: function(msg) {
         try {
             this.forward(JSON.parse(msg.data));
-        } catch(e) {
+        } catch (e) {
             throw Error('Unable to parse incoming message ' + JSON.stringify(msg.data) + ': ' + e);
         }
     },
@@ -83,12 +83,13 @@ Router.prototype = {
      * @param to recipient
      * @param type the message type
      * @param payload the message payload
-    */
+     */
     route: function(to, type, payload) {
-        this.forward({to: to,
-                      from: this._id,
-                      type: type,
-                      payload: payload
+        this.forward({
+            to: to,
+            from: this._id,
+            type: type,
+            payload: payload
         });
     },
 
@@ -114,7 +115,7 @@ Router.prototype = {
         }
         try {
             receiver.dataChannel.send(JSON.stringify(msg));
-        } catch(e) {
+        } catch (e) {
             throw Error('Unable to route message to ' + msg.to + ' because the DataChannel connection failed.');
         }
     },
@@ -122,7 +123,7 @@ Router.prototype = {
     /**
      * Deliver a message to this peer. Is called when the `to` field of
      * the message contains the id of this peer. Decides where to deliver
-     * the message to by calling the registered callback using the `type` 
+     * the message to by calling the registered callback using the `type`
      * field (e.g. webrtc connection/ neighbour discovery/ application) of
      * the message.
      *
@@ -137,7 +138,7 @@ Router.prototype = {
     },
 
     /**
-     * Register a delivery callback. The registered callback gets 
+     * Register a delivery callback. The registered callback gets
      * called when a specific type of message arrives with the `from`
      * field set to this peers' id.
      *
@@ -151,7 +152,7 @@ Router.prototype = {
     },
 
     /**
-     * Register a monitor callback. The registered callback gets 
+     * Register a monitor callback. The registered callback gets
      * called when a message arrives with the `from` field set to
      * this peers' id.
      *
@@ -169,11 +170,13 @@ Router.prototype = {
      * @todo implement
      */
     _discoverNeighbours: function(peer) {
-        this.route(peer.id, 'discovery', {type: 'request'});
+        this.route(peer.id, 'discovery', {
+            type: 'request'
+        });
     },
 
     _onDiscoveryMessage: function(msg, from) {
-        switch(msg.type) {
+        switch (msg.type) {
             case 'answer':
                 this._processDiscoveryAnswer(msg, from);
                 break;
@@ -194,8 +197,8 @@ Router.prototype = {
      */
     _processDiscoveryAnswer: function(msg, from) {
         var i, ids = msg.ids;
-        for(i = 0; i < ids.length; i++) {
-            if(ids[i] !== this._id) {
+        for (i = 0; i < ids.length; i++) {
+            if (ids[i] !== this._id) {
                 this._connectionManager.connect(ids[i]);
             }
         }
@@ -210,16 +213,19 @@ Router.prototype = {
      */
     _processDiscoveryRequest: function(msg, from) {
         var peerIds = [],
-        peer;
+            peer;
         for (peer in this._peerTable) {
             if (this._peerTable.hasOwnProperty(peer) && this._peerTable[peer] instanceof Peer) {
                 peerIds.push(peer);
             }
         }
-        this.route(from, 'discovery', {type: 'answer', ids: peerIds});
+        this.route(from, 'discovery', {
+            type: 'answer',
+            ids: peerIds
+        });
     }
 };
 
-if(typeof(module) !== 'undefined') {
+if (typeof(module) !== 'undefined') {
     module.exports = Router;
 }

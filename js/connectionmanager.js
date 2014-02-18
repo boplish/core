@@ -6,7 +6,7 @@
  * well as joining a network (bootstrapping).
  */
 ConnectionManager = function() {
-    if(!(this instanceof ConnectionManager)) {
+    if (!(this instanceof ConnectionManager)) {
         return new ConnectionManager();
     }
     this._bootstrap = null;
@@ -27,7 +27,7 @@ ConnectionManager.prototype = {
         findInSDP: function(sdp, field) {
             var result = [];
             sdp.split('\r\n').forEach(function(line) {
-                if(line.match(new RegExp("^" + field + "="))) {
+                if (line.match(new RegExp("^" + field + "="))) {
                     result.push(line.split("=", 2)[1]);
                 }
             });
@@ -54,7 +54,7 @@ ConnectionManager.prototype = {
      * established.
      */
     bootstrap: function(router, successCallback, errorCallback) {
-        if(this._state !== 'uninitialized') {
+        if (this._state !== 'uninitialized') {
             errorCallback('Invalid state');
             return;
         }
@@ -69,7 +69,7 @@ ConnectionManager.prototype = {
         };
         router.registerDeliveryCallback('signaling-protocol', this._onMessage.bind(this));
         pc.createOffer(this._onCreateOfferSuccess.bind(this, pc, null, this._bootstrap),
-                       this._onCreateOfferError.bind(this, errorCallback));
+            this._onCreateOfferError.bind(this, errorCallback));
     },
 
     /**
@@ -82,11 +82,11 @@ ConnectionManager.prototype = {
      * failed
      */
     connect: function(to, successCallback, errorCallback) {
-        if(this._state !== 'ready') {
+        if (this._state !== 'ready') {
             errorCallback('Invalid state');
             return;
         }
-        if(this._pending[to] !== undefined) {
+        if (this._pending[to] !== undefined) {
             errorCallback('Already connecting');
         }
         var pc = new RTCPeerConnection(this._pcoptions);
@@ -98,17 +98,17 @@ ConnectionManager.prototype = {
             onerror: errorCallback,
         };
         pc.createOffer(this._onCreateOfferSuccess.bind(this, pc, to, this._pending[to]),
-                       this._onCreateOfferError.bind(this, errorCallback));
+            this._onCreateOfferError.bind(this, errorCallback));
     },
 
     _onCreateOfferSuccess: function(pc, to, pendingOffer, sessionDesc) {
-        if(pendingOffer.drop) {
+        if (pendingOffer.drop) {
             return;
         }
         pc.onicecandidate = function(iceEvent) {
             if (pc.iceGatheringState === 'complete' || iceEvent.candidate === null) {
                 // spec specifies that a null candidate means that the ice gathering is complete
-                pc.onicecandidate = function(){};
+                pc.onicecandidate = function() {};
                 this._router.route(to, 'signaling-protocol', pc.localDescription);
             }
         }.bind(this);
@@ -122,7 +122,7 @@ ConnectionManager.prototype = {
     },
 
     _onMessage: function(msg, from) {
-        switch(msg.type) {
+        switch (msg.type) {
             case 'offer':
                 this._onReceiveOffer(msg, from);
                 break;
@@ -138,7 +138,7 @@ ConnectionManager.prototype = {
     },
 
     _onReceiveAnswer: function(desc, from) {
-        if(this._state === 'bootstrapping') {
+        if (this._state === 'bootstrapping') {
             // TODO(max): check if we actually have a pending PC and ``drop'' is not set (glare).
             this._bootstrap.pc.setRemoteDescription(new RTCSessionDescription(desc));
             this._bootstrap.dc.onopen = function(ev) {
@@ -149,14 +149,14 @@ ConnectionManager.prototype = {
             }.bind(this);
         } else {
             var pending = this._pending[from];
-            if(pending === undefined) {
+            if (pending === undefined) {
                 return; // we haven't offered to this node, silently discard
             }
             pending.pc.setRemoteDescription(new RTCSessionDescription(desc));
             pending.dc.onopen = function(ev) {
                 var peer = new Peer(from, pending.pc, ev.target);
                 this._router.addPeer(peer);
-                if(typeof(pending.onsuccess) === 'function') {
+                if (typeof(pending.onsuccess) === 'function') {
                     // TODO(max): would it make sense to pass the remote peer's
                     // ID to the handler?
                     pending.onsuccess();
@@ -170,18 +170,20 @@ ConnectionManager.prototype = {
     _onReceiveOffer: function(desc, from) {
         // if we're already connected or are already processing an offer from
         // this peer, deny this offer
-        if(this._connections[from] !== undefined || this._pending[from] !== undefined) {
-            this._router.route(from, 'signaling-protocol', {type: 'denied'});
+        if (this._connections[from] !== undefined || this._pending[from] !== undefined) {
+            this._router.route(from, 'signaling-protocol', {
+                type: 'denied'
+            });
         }
 
         var offerId = this.utils.findSessionId(desc.sdp);
 
-        if(this._state === 'bootstrapping') {
-            if(this._bootstrap.pc.remoteDescription !== null) {
+        if (this._state === 'bootstrapping') {
+            if (this._bootstrap.pc.remoteDescription !== null) {
                 // we already have a bootstrap peer
                 return;
             }
-            if(offerId > this._bootstrap.offerId) {
+            if (offerId > this._bootstrap.offerId) {
                 // discard our offer and accept this one
                 var newBootstrap = {
                     pc: new RTCPeerConnection(this._pcoptions),
@@ -210,9 +212,9 @@ ConnectionManager.prototype = {
             this._bootstrap.pc.createAnswer(this._onCreateAnswerSuccess.bind(this, from, this._bootstrap.pc), this._onCreateAnswerError.bind(this));
         } else {
             var pendingOffer = this._pending[from];
-            if(pendingOffer !== undefined) {
+            if (pendingOffer !== undefined) {
                 // handle glare
-                if(offerId > pendingOffer.offerId) {
+                if (offerId > pendingOffer.offerId) {
                     // discard our offer and accept this one
                     newPendingOffer = {
                         onsuccess: pendingOffer.onsuccess,
@@ -233,7 +235,7 @@ ConnectionManager.prototype = {
                 ev.channel.onopen = function(ev) {
                     var peer = new Peer(from, pc, ev.target);
                     this._router.addPeer(peer);
-                    if(typeof(this._pending[from].onsuccess) === 'function') {
+                    if (typeof(this._pending[from].onsuccess) === 'function') {
                         this._pending[from].onsuccess();
                     }
                     delete this._pending[from];
@@ -248,7 +250,7 @@ ConnectionManager.prototype = {
         pc.onicecandidate = function(iceEvent) {
             if (pc.iceGatheringState === 'complete' || iceEvent.candidate === null) {
                 // spec specifies that a null candidate means that the ice gathering is complete
-                pc.onicecandidate = function(){};
+                pc.onicecandidate = function() {};
                 this._router.route(to, 'signaling-protocol', pc.localDescription);
             }
         }.bind(this);
@@ -266,7 +268,7 @@ ConnectionManager.prototype = {
      * called.
      */
     _onOfferDenied: function(desc) {
-        if(this._state === 'bootstrapping') {
+        if (this._state === 'bootstrapping') {
             this._bootstrap.pc = new RTCPeerConnection(this._pcoptions);
             this._bootstrap.dc = this._bootstrap.pc.createDataChannel(null, {});
             this._bootstrap.offerId = null;
@@ -275,6 +277,6 @@ ConnectionManager.prototype = {
 
 };
 
-if(typeof(module) !== 'undefined') {
+if (typeof(module) !== 'undefined') {
     module.exports = ConnectionManager;
 }

@@ -15,9 +15,9 @@
  */
 BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     var browser = this.utils.whatBrowserAmI();
-    if (browser.vendor === 'Firefox' && Number(browser.version.slice(0,2)) >= 26 ) {
+    if (browser.vendor === 'Firefox' && Number(browser.version.slice(0, 2)) >= 26) {
         // we are on FF
-    } else if (browser.vendor === 'Chrome' && Number(browser.version.slice(0,2)) >= 33) {
+    } else if (browser.vendor === 'Chrome' && Number(browser.version.slice(0, 2)) >= 33) {
         // we are on Chrome
     } else {
         errorCallback('You will not be able to use BOPlish as your browser is currently incompatible. Please use either Firefox 26 or Chrome 33 upwards.');
@@ -45,14 +45,20 @@ BOPlishClient.prototype = {
         /**
          * Returns an object with information about the browser in use
          */
-        whatBrowserAmI: function(){
+        whatBrowserAmI: function() {
             // source http://stackoverflow.com/questions/5916900/detect-version-of-browser
-            var ua= navigator.userAgent,
-            N= navigator.appName, tem,
-            M= ua.match(/(opera|chrome|safari|firefox|msie|trident)\/?\s*([\d\.]+)/i) || [];
-            M= M[2]? [M[1], M[2]]:[N, navigator.appVersion, '-?'];
-            if(M && (tem= ua.match(/version\/([\.\d]+)/i))!== null) {M[2]= tem[1];}
-            return {vendor:M[0], version:M[1]};
+            var ua = navigator.userAgent,
+                N = navigator.appName,
+                tem,
+                M = ua.match(/(opera|chrome|safari|firefox|msie|trident)\/?\s*([\d\.]+)/i) || [];
+            M = M[2] ? [M[1], M[2]] : [N, navigator.appVersion, '-?'];
+            if (M && (tem = ua.match(/version\/([\.\d]+)/i)) !== null) {
+                M[2] = tem[1];
+            }
+            return {
+                vendor: M[0],
+                version: M[1]
+            };
         }
     },
     /**
