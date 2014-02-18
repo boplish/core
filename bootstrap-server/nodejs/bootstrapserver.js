@@ -3,6 +3,7 @@
 var WebSocketServer = require('websocket').server;
 var http = require('http');
 var fs = require('fs');
+var logger = require('winston');
 
 /**
  * @constructor
@@ -35,7 +36,7 @@ BootstrapServer.prototype = {
             autoAcceptConnections: false
         });
         this._websocketServer.on('request', this._onWebSocketRequest.bind(this));
-        console.log((new Date()) + ' BootstrapServer listening on ' + this._hostname + ':' + this._port + ', serving from ' + this._staticPath);
+        logger.info((new Date()) + ' BootstrapServer listening on ' + this._hostname + ':' + this._port + ', serving from ' + this._staticPath);
     },
 
     /**
@@ -45,7 +46,7 @@ BootstrapServer.prototype = {
      * @param response {http.ServerResponse}
      */
     _onHttpRequest: function(request, response) {
-        console.log((new Date()) + ' Received HTTP request for ' + request.url);
+        logger.info((new Date()) + ' Received HTTP request for ' + request.url);
         
         try {
             response.writeHead(200);
@@ -74,10 +75,10 @@ BootstrapServer.prototype = {
         var peerId = url.substr(4);
         if (!peerId || url.substr(0,4) !== '/ws/') {
             request.reject('404', 'malformed request');
-            console.log((new Date()) + ' Discarding Request because of malformed uri ' + request.httpRequest.url);
+            logger.info((new Date()) + ' Discarding Request because of malformed uri ' + request.httpRequest.url);
             return;
         }
-        console.log((new Date()) + ' Received WS request from PeerId ' + peerId);
+        logger.info((new Date()) + ' Received WS request from PeerId ' + peerId);
         conn = request.accept(null, request.origin);
         conn.on('close', this._onWebSocketClose.bind(this, peerId));
         conn.on('message', this._onWebSocketMessage.bind(this));
@@ -94,11 +95,11 @@ BootstrapServer.prototype = {
         try {
             msg = JSON.parse(rawMsg.utf8Data);
         } catch (e) {
-            console.log((new Date()) + ' Could not parse incoming message: ' + rawMsg.utf8Data + ' ' + e);
+            logger.info((new Date()) + ' Could not parse incoming message: ' + rawMsg.utf8Data + ' ' + e);
             return;
         }
         if (typeof(msg.payload) === 'undefined' || msg.payload === null) {
-            console.log((new Date()) + ' Discarding message: ' + JSON.stringify(msg) + ' because it does not carry any payload');
+            logger.info((new Date()) + ' Discarding message: ' + JSON.stringify(msg) + ' because it does not carry any payload');
             return;
         }
         switch (msg.payload.type) {
@@ -109,7 +110,7 @@ BootstrapServer.prototype = {
                 this._handleAnswer(msg);
                 break;
             default:
-                console.log((new Date()) + ' Discarding message: ' + JSON.stringify(msg) + ' because the type is unknown');
+                logger.info((new Date()) + ' Discarding message: ' + JSON.stringify(msg) + ' because the type is unknown');
         }
     },
 
@@ -139,7 +140,7 @@ BootstrapServer.prototype = {
             // random receiver (inital offer)
             for (user in this._users) {
                 if (Math.random() < 1/++count && user !== msg.from) {
-                    console.log((new Date()) + ' Sending offer from: ' + msg.from + ' to: ' + user);
+                    logger.info((new Date()) + ' Sending offer from: ' + msg.from + ' to: ' + user);
                     msg.to = user;
                     receiver = this._users[user];
                     break;
@@ -149,7 +150,7 @@ BootstrapServer.prototype = {
         try {
             receiver.send(JSON.stringify(msg));
         } catch (e) {
-            console.log((new Date()) + ' Could not send offer to ' + msg.to + ' because the WebSocket connection failed: ' + e);
+            logger.info((new Date()) + ' Could not send offer to ' + msg.to + ' because the WebSocket connection failed: ' + e);
         }
     },
 
@@ -162,10 +163,10 @@ BootstrapServer.prototype = {
     _handleAnswer: function(msg) {
         var receiver = this._users[msg.to];
         try {
-            console.log((new Date()) + ' Sending answer from: ' + msg.from + ' to: ' + msg.to);
+            logger.info((new Date()) + ' Sending answer from: ' + msg.from + ' to: ' + msg.to);
             this._users[msg.to].send(JSON.stringify(msg));
         } catch(e) {
-            console.log((new Date()) + ' Could not send offer to ' + msg.to + ' because the WebSocket connection failed: ' + e);
+            logger.info((new Date()) + ' Could not send offer to ' + msg.to + ' because the WebSocket connection failed: ' + e);
         }
     },
 
@@ -177,7 +178,7 @@ BootstrapServer.prototype = {
      * @param description {Object} (unused) Description for disconnect
      */
     _onWebSocketClose: function(peerId, reasonCode, description) {
-        console.log((new Date()) + ' Removing user: ' + peerId);
+        logger.info((new Date()) + ' Removing user: ' + peerId);
         delete this._users[peerId];
     },
 

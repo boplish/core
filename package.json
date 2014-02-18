@@ -12,6 +12,7 @@
     "sinon": "~1.7.3",
     "grunt-sftp-deploy": "0.0.9",
     "websocket": "~1.0.8",
-    "grunt-jsbeautifier": "~0.2.4"
+    "grunt-jsbeautifier": "~0.2.4",
+    "winston": "~0.7.2"
   }
 }

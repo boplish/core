@@ -1,10 +1,10 @@
 var assert = require('should');
 var BootstrapServer = require('../bootstrap-server/nodejs/bootstrapserver.js');
+var winston = require('winston');
+winston.remove(winston.transports.Console);
 var sinon = require('sinon');
 var WebSocketClient = require('websocket').client;
 var WebSocketServer = require('websocket').server;
-
-
 
 describe('BoostrapServer', function(){
     describe('#constructor()', function(){
