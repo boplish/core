@@ -1,4 +1,4 @@
-/** @fileOverview URI parsing functionality */
+/** @fileOverview URI parsing functionality for BOPlish URIs */
 
 /**
  * @constructor
@@ -7,10 +7,10 @@
  *
  * @param str the URI string to parse
  */
-URI = function(str) {
+BopURI = function(str) {
 
-    if (!(this instanceof URI)) {
-        return new URI(str);
+    if (!(this instanceof BopURI)) {
+        return new BopURI(str);
     }
 
     var pathSepIdx = str.indexOf('/');
@@ -38,8 +38,8 @@ URI = function(str) {
     return this;
 };
 
-URI.prototype = {};
+BopURI.prototype = {};
 
 if (typeof(module) !== 'undefined') {
-    module.exports = URI;
+    module.exports = BopURI;
 }
