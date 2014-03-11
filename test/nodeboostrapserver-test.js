@@ -112,7 +112,7 @@ describe('BoostrapServer', function(){
                 conn.send(JSON.stringify({
                     type: 'signaling-protocol',
                     from: 'client2',
-                    to: '',
+                    to: '*',
                     payload: {type: 'offer'}
                 }));
             });
