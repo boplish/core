@@ -61,6 +61,7 @@ ConnectionManager.prototype = {
         this._state = 'bootstrapping';
         this._router = router;
         var pc = new RTCPeerConnection(null);
+        var to = '*';
         this._bootstrap = {
             pc: pc,
             dc: pc.createDataChannel(null, {}),
@@ -68,7 +69,7 @@ ConnectionManager.prototype = {
             onerror: errorCallback,
         };
         router.registerDeliveryCallback('signaling-protocol', this._onMessage.bind(this));
-        pc.createOffer(this._onCreateOfferSuccess.bind(this, pc, null, this._bootstrap),
+        pc.createOffer(this._onCreateOfferSuccess.bind(this, pc, to, this._bootstrap),
             this._onCreateOfferError.bind(this, errorCallback));
     },
 

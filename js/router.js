@@ -104,6 +104,9 @@ Router.prototype = {
         if (typeof(this._monitorCallback) === 'function') {
             this._monitorCallback(msg);
         }
+        if (!msg.to) {
+            throw Error('Unable to route message because no recipient can be determined');
+        }
         if (this._id === msg.to) {
             this.deliver(msg);
             return;

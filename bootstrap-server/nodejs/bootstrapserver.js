@@ -123,8 +123,8 @@ BootstrapServer.prototype = {
      */
     _handleOffer: function(msg) {
         var receiver, user, count = 0;
-        if (Object.keys(this._users).length <= 1 || (msg.to && !this._users[msg.to])) {
-            // denied
+        if (Object.keys(this._users).length <= 1) {
+            // denied (i.e. this is the first connecting peer)
             this._users[msg.from].send(JSON.stringify({
                 type: 'signaling-protocol',
                 to: msg.from,
@@ -133,10 +133,10 @@ BootstrapServer.prototype = {
             }));
             return;
         }
-        if (msg.to && this._users[msg.to]) {
+        if (this._users[msg.to]) {
             // receiver known
             receiver = this._users[msg.to];
-        } else {
+        } else if (msg.to === '*') {
             // random receiver (inital offer)
             for (user in this._users) {
                 if (Math.random() < 1/++count && user !== msg.from) {
@@ -146,6 +146,9 @@ BootstrapServer.prototype = {
                     break;
                 }
             }
+        } else {
+            logger.info((new Date()) + ' Could not handle offer because the message is malformed');
+            return;
         }
         try {
             receiver.send(JSON.stringify(msg));
