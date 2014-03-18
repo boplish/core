@@ -36,7 +36,7 @@ BootstrapServer.prototype = {
             autoAcceptConnections: false
         });
         this._websocketServer.on('request', this._onWebSocketRequest.bind(this));
-        logger.info((new Date()) + ' BootstrapServer listening on ' + this._hostname + ':' + this._port + ', serving from ' + this._staticPath);
+        logger.info('BootstrapServer listening on ' + this._hostname + ':' + this._port + ', serving from ' + this._staticPath);
     },
 
     /**
@@ -46,7 +46,7 @@ BootstrapServer.prototype = {
      * @param response {http.ServerResponse}
      */
     _onHttpRequest: function(request, response) {
-        logger.info((new Date()) + ' Received HTTP request for ' + request.url);
+        logger.info('Received HTTP request for ' + request.url);
         
         try {
             response.writeHead(200);
@@ -75,10 +75,10 @@ BootstrapServer.prototype = {
         var peerId = url.substr(4);
         if (!peerId || url.substr(0,4) !== '/ws/') {
             request.reject('404', 'malformed request');
-            logger.info((new Date()) + ' Discarding Request because of malformed uri ' + request.httpRequest.url);
+            logger.info('Discarding Request because of malformed uri ' + request.httpRequest.url);
             return;
         }
-        logger.info((new Date()) + ' Received WS request from PeerId ' + peerId);
+        logger.info('Received WS request from PeerId ' + peerId);
         conn = request.accept(null, request.origin);
         conn.on('close', this._onWebSocketClose.bind(this, peerId));
         conn.on('message', this._onWebSocketMessage.bind(this));
@@ -95,11 +95,11 @@ BootstrapServer.prototype = {
         try {
             msg = JSON.parse(rawMsg.utf8Data);
         } catch (e) {
-            logger.info((new Date()) + ' Could not parse incoming message: ' + rawMsg.utf8Data + ' ' + e);
+            logger.info('Could not parse incoming message: ' + rawMsg.utf8Data + ' ' + e);
             return;
         }
         if (typeof(msg.payload) === 'undefined' || msg.payload === null) {
-            logger.info((new Date()) + ' Discarding message: ' + JSON.stringify(msg) + ' because it does not carry any payload');
+            logger.info('Discarding message: ' + JSON.stringify(msg) + ' because it does not carry any payload');
             return;
         }
         switch (msg.payload.type) {
@@ -110,7 +110,7 @@ BootstrapServer.prototype = {
                 this._handleAnswer(msg);
                 break;
             default:
-                logger.info((new Date()) + ' Discarding message: ' + JSON.stringify(msg) + ' because the type is unknown');
+                logger.info('Discarding message: ' + JSON.stringify(msg) + ' because the type is unknown');
         }
     },
 
@@ -140,7 +140,7 @@ BootstrapServer.prototype = {
             // random receiver (inital offer)
             for (user in this._users) {
                 if (Math.random() < 1/++count && user !== msg.from) {
-                    logger.info((new Date()) + ' Sending offer from: ' + msg.from + ' to: ' + user);
+                    logger.info('Sending offer from: ' + msg.from + ' to: ' + user);
                     msg.to = user;
                     receiver = this._users[user];
                     break;
@@ -150,7 +150,7 @@ BootstrapServer.prototype = {
         try {
             receiver.send(JSON.stringify(msg));
         } catch (e) {
-            logger.info((new Date()) + ' Could not send offer to ' + msg.to + ' because the WebSocket connection failed: ' + e);
+            logger.info('Could not send offer to ' + msg.to + ' because the WebSocket connection failed: ' + e);
         }
     },
 
@@ -163,10 +163,10 @@ BootstrapServer.prototype = {
     _handleAnswer: function(msg) {
         var receiver = this._users[msg.to];
         try {
-            logger.info((new Date()) + ' Sending answer from: ' + msg.from + ' to: ' + msg.to);
+            logger.info('Sending answer from: ' + msg.from + ' to: ' + msg.to);
             this._users[msg.to].send(JSON.stringify(msg));
         } catch(e) {
-            logger.info((new Date()) + ' Could not send offer to ' + msg.to + ' because the WebSocket connection failed: ' + e);
+            logger.info('Could not send offer to ' + msg.to + ' because the WebSocket connection failed: ' + e);
         }
     },
 
@@ -178,7 +178,7 @@ BootstrapServer.prototype = {
      * @param description {Object} (unused) Description for disconnect
      */
     _onWebSocketClose: function(peerId, reasonCode, description) {
-        logger.info((new Date()) + ' Removing user: ' + peerId);
+        logger.info('Removing user: ' + peerId);
         delete this._users[peerId];
     },
 
