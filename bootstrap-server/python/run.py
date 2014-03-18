@@ -16,7 +16,7 @@ def handle_offer(socket, offer):
     '''
 
     # deny offer if no other peer is connected
-    if len(users) <= 1 or (offer["to"] and not users[offer["to"]]):
+    if len(users) <= 1:
         print "Denying offer"
         socket.send(
             json.dumps(
@@ -29,12 +29,16 @@ def handle_offer(socket, offer):
             )
         )
         return
-    if offer["to"] and users[offer["to"]]:
-        receiverId = offer["to"]
-    else:
-        # choose a receiver randomly
+    if offer["to"] == "*":
+        # random receiver (inital offer)
         receiverId = random.choice(
             [k for k in users.keys() if k != offer["from"]])
+    elif offer["to"] and users[offer["to"]]:
+        # receiver known
+        receiverId = offer["to"]
+    else:
+        print "Discarding message because it does not have a valid recipient"
+        return ""
     offer["to"] = receiverId
     receiver = users[receiverId]
     print "Forwarding offer from " + offer["from"] + " to " + receiverId
