@@ -38,7 +38,7 @@ def handle_offer(socket, offer):
         receiverId = offer["to"]
     else:
         print "Discarding message because it does not have a valid recipient"
-        return ""
+        return
     offer["to"] = receiverId
     receiver = users[receiverId]
     print "Forwarding offer from " + offer["from"] + " to " + receiverId
@@ -67,7 +67,7 @@ def ws(username):
         if not message["type"] == "signaling-protocol":
             print "Discarding message because it is not a valid " +\
                 "signaling-protocol message"
-            return ""
+            return
         if message["payload"] and message["payload"]["type"] == "offer":
             handle_offer(socket, message)
         elif message["payload"] and message["payload"]["type"] == "answer":
