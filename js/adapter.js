@@ -25,7 +25,54 @@ function trace(text) {
     console.log((performance.now() / 1000).toFixed(3) + ": " + text);
 }
 
-if (navigator.mozGetUserMedia) {
+if (typeof(process) !== 'undefined' && process.title === 'node') {
+    console.log("This appears to be Node.js");
+
+    var webrtc = require('wrtc');
+    var util = require('util');
+    var WebSocketClient = require('websocket').client;
+
+    RTCPeerConnection = function() {
+        webrtc.RTCPeerConnection.call(this);
+        var interval = setInterval(function(){
+            if (this.iceGatheringState === 'complete') {
+                clearInterval(interval);
+                this.onicecandidate(null);
+            };
+        }.bind(this), 1000); // miserable hack, waiting for https://github.com/js-platform/node-webrtc/issues/44
+    }
+    util.inherits(RTCPeerConnection, webrtc.RTCPeerConnection);
+
+    GLOBAL.RTCPeerConnection = RTCPeerConnection;
+    GLOBAL.RTCIceCandidate = webrtc.RTCIceCandidate;
+    GLOBAL.RTCSessionDescription = webrtc.RTCSessionDescription;
+    GLOBAL.DataChannel = webrtc.DataChannel;
+
+    WebSocket = function (url){
+        WebSocketClient.call(this);
+        this.onopen = function(){};
+        this.onerror = function(){};
+        this.onmessage = function(){};
+        this.send = function(){};
+        this.on('connect', function(connection){
+            connection.on('message', function(msg){
+                msg.data = msg.utf8Data;
+                this.onmessage(msg);
+            }.bind(this));
+            this.send = function(msg) {
+                connection.send(msg);
+            };
+            this.onopen();
+        });
+        this.on('error', this.onerror);
+        process.nextTick(function(){ // break event loop to set onopen callback
+            this.connect(url)
+        }.bind(this));
+    }
+    util.inherits(WebSocket, WebSocketClient);
+
+    GLOBAL.WebSocket = WebSocket;
+} else if (navigator.mozGetUserMedia) {
     console.log("This appears to be Firefox");
 
     webrtcDetectedBrowser = "firefox";

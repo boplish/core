@@ -200,8 +200,8 @@ ConnectionManager.prototype = {
             }
             this._bootstrap.pc.setRemoteDescription(new RTCSessionDescription(desc));
             this._bootstrap.pc.ondatachannel = function(ev) {
-                ev.channel.onopen = function(ev) {
-                    var peer = new Peer(from, this._bootstrap.pc, ev.target);
+                ev.channel.onopen = function() {
+                    var peer = new Peer(from, this._bootstrap.pc, ev.channel);
                     this._router.addPeer(peer);
                     this._state = 'ready';
                     this._bootstrap.onsuccess();
@@ -232,8 +232,8 @@ ConnectionManager.prototype = {
             this._pending[from] = pendingOffer || {};
             this._pending[from].pc = pc;
             pc.ondatachannel = function(ev) {
-                ev.channel.onopen = function(ev) {
-                    var peer = new Peer(from, pc, ev.target);
+                ev.channel.onopen = function() {
+                    var peer = new Peer(from, pc, ev.channel);
                     this._router.addPeer(peer);
                     if (typeof(this._pending[from].onsuccess) === 'function') {
                         this._pending[from].onsuccess();
