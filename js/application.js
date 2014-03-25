@@ -25,6 +25,8 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     }
 
     this.id = sha1.hash(Math.random().toString());
+    this._connectionManager = new ConnectionManager();
+
     bootstrapHost = bootstrapHost || window.location.host;
 
     var channel = new WebSocket('ws://' + bootstrapHost + '/ws/' + this.id);
@@ -35,7 +37,6 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
         this._connectionManager.bootstrap(this._router, successCallback, errorCallback);
     }.bind(this);
 
-    this._connectionManager = new ConnectionManager();
     this._router = new Router(this.id, channel, this._connectionManager);
 };
 

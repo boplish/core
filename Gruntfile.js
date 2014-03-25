@@ -1,9 +1,10 @@
 module.exports = function(grunt) {
     grunt.initConfig({
         jsdoc: {
-            src: ['js/*.js'],
+            src: ['js/'],
             options: {
-                destination: 'doc'
+                destination: 'doc',
+                recurse: true
             }
         },
 
@@ -58,12 +59,16 @@ module.exports = function(grunt) {
             options: {
                 ignoreLeaks: false,
                 ui: 'bdd',
-                reporter: 'dot'
+                reporter: 'spec'
             },
 
             all: {
                 src: ['test/*-test.js']
-            }
+            },
+
+            chord: {
+                src: ['test/chord-test.js']
+            },
         }
 
     });
