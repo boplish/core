@@ -37,6 +37,17 @@ describe('Node', function() {
                 }
             });
         });
+        it('should handle unexpected requests gracefully', function() {
+            var n = new Node(0, {});
+            function msg(obj) {
+                return {data: JSON.stringify(obj)};
+            }
+            n.onmessage({data: "justastring"});
+            n.onmessage(msg({}));
+            n.onmessage(msg({type: 'hello'}));
+            n.onmessage(msg({type: n.message_types.SUCCESSOR}));
+            n.onmessage(msg({type: n.message_types.FIND_SUCCESSOR}));
+        });
     });
     describe('find_successor', function() {
         it('should send the correct message', function() {

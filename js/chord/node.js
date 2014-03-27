@@ -8,6 +8,7 @@ var Node = function(id, dc) {
     this._dc = dc;
     this._dc.onmessage = this.onmessage.bind(this);
     this._pending = {};
+    this._seqnr = 0;
 
     return this;
 };
@@ -19,28 +20,57 @@ Node.prototype = {
         SUCCESSOR: 2,
     },
 
-    send: function(msg, cb) {
-        var seqnr = Object.keys(this._pending).length;
-        msg.seqnr = seqnr;
-        this._pending[seqnr] = cb;
+    send_request: function(msg, cb) {
+        msg.seqnr = this._seqnr++;
+        this._pending[msg.seqnr] = cb;
+        this.send(msg);
+    },
+
+    send_successor: function(seqnr) {
+        var msg = {type: this.message_types.SUCCESSOR, successor: 3, seqnr: seqnr};
+        this.send(msg);
+    },
+
+    send: function(msg) {
         this._dc.send(JSON.stringify(msg));
     },
 
     onmessage: function(msg) {
-        var decoded = JSON.parse(msg.data), cb;
-        switch(decoded.type) {
-            case this.message_types.FIND_SUCCESSOR:
-                var out = {type: this.message_types.SUCCESSOR, successor: 3, seqnr: decoded.seqnr};
-                this._dc.send(JSON.stringify(out));
-                return;
+        var decoded, cb;
+        try {
+            decoded = JSON.parse(msg.data);
+        } catch(e) {
+            return;
         }
         cb = this._pending[decoded.seqnr];
-        delete this._pending[decoded.seqnr];
-        cb(decoded);
+        if(typeof(cb) === 'function') {
+            this.handle_response(decoded, cb);
+        } else {
+            this.handle_request(decoded);
+        }
+    },
+
+    handle_response: function(msg, callback) {
+        delete this._pending[msg.seqnr];
+        callback(msg);
+    },
+
+    handle_request: function(msg) {
+        if(typeof(msg.seqnr) === "undefined") {
+            return; // ignore message without sequence number
+        }
+        switch(msg.type) {
+            case this.message_types.FIND_SUCCESSOR:
+                this.send_successor(msg.seqnr);
+                break;
+            default:
+                //unknown request
+                break;
+        }
     },
 
     find_successor: function (id, cb) {
-        this.send({type: this.message_types.FIND_SUCCESSOR, id: id}, function(msg) {
+        this.send_request({type: this.message_types.FIND_SUCCESSOR, id: id}, function(msg) {
             cb(msg.successor);
         });
     },

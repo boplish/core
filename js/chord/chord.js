@@ -1,3 +1,5 @@
+var Node = require('./node');
+
 /** @fileOverview Chord DHT implementation */
 
 /**
@@ -32,11 +34,6 @@ Chord.prototype.join = function(bootstrap, successCallback) {
     // TODO: implement
 };
 
-Chord.prototype.init_finger_table = function(remote) {
-    // TODO: implement
-    this.send(remote, {method: 'find_successor'});
-};
-
 /**
  * Store 'value' under 'key' in the DHT
  *
@@ -55,6 +52,10 @@ Chord.prototype.get = function(key) {
     // TODO: implement
 };
 
+Chord.prototype.init_finger_table = function(remote) {
+    // TODO: implement
+    this.send(remote, {method: 'find_successor'});
+};
 
 if (typeof(module) !== 'undefined') {
     module.exports = Chord;

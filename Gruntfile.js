@@ -79,7 +79,8 @@ module.exports = function(grunt) {
     grunt.loadNpmTasks('grunt-jsbeautifier');
     grunt.registerTask('beautify', 'jsbeautifier:modify');
     grunt.registerTask('verify', 'jsbeautifier:verify');
-    grunt.registerTask('test', 'simplemocha');
     grunt.registerTask('dist', 'uglify:production');
-    grunt.registerTask('default', ['jsdoc', 'jshint', 'simplemocha', 'beautify', 'uglify:production']);
+    grunt.registerTask('test', 'simplemocha:all');
+    grunt.registerTask('test:chord', 'simplemocha:chord');
+    grunt.registerTask('default', ['jsdoc', 'jshint', 'test', 'beautify', 'uglify:production']);
 };
