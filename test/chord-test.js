@@ -121,15 +121,9 @@ describe('Node', function() {
         it('should return and set the correct ID', function(done) {
             var dcs = mock_dcs();
             var n1 = new Node(null, null, dcs[0], null);
-            var n2 = new Node({
-                digest: [123, 123],
-                number: BigInt(1)
-            }, null, dcs[1], null);
+            var n2 = new Node(BigInt(1), null, dcs[1], null);
             n1.get_node_id(function(id) {
-                assert.equal(id, {
-                    digest: [123, 123],
-                    number: BigInt(1)
-                });
+                assert.ok(id.equals(BigInt(1)));
                 assert.equal(n1._id, id);
                 done();
             });
@@ -144,7 +138,7 @@ describe('Node', function() {
             n.find_successor(1);
             sinon.assert.calledWith(dcStub, JSON.stringify({
                 type: n.message_types.FIND_SUCCESSOR,
-                id: 1,
+                id: "1",
                 seqnr: 0
             }));
         });
@@ -152,7 +146,7 @@ describe('Node', function() {
             var dc = {};
             dc.send = function(msg) {
                 var dec = JSON.parse(msg);
-                if (dec.id === 2) {
+                if (dec.id === "2") {
                     setTimeout(function() {
                         dc.onmessage({
                             data: JSON.stringify({
@@ -162,7 +156,7 @@ describe('Node', function() {
                             })
                         });
                     }, 10);
-                } else if (dec.id === 1) {
+                } else if (dec.id === "1") {
                     setTimeout(function() {
                         dc.onmessage({
                             data: JSON.stringify({

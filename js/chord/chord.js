@@ -22,10 +22,7 @@ var Chord = function(connectionManager, hash, keyLength) {
     this._connectionManager = connectionManager;
     this._predecessor = null;
     this._fingerTable = {};
-    this._id = {
-        digest: digest,
-        number: hash.bigInteger(digest)
-    };
+    this._id = hash.bigInteger(digest);
     this._m = keyLength;
     this._localNode = new Node(this._id, this._id, null);
 
@@ -57,7 +54,7 @@ function memoize(func) {
 }
 
 function calcStart(i) {
-    return this._id.number.add(BigInt(2).pow(i - 1)).mod(BigInt(2).pow(this._m));
+    return this._id.add(BigInt(2).pow(i - 1)).mod(BigInt(2).pow(this._m));
 }
 
 function inInterval(val, start, end) {
@@ -88,7 +85,7 @@ Chord.prototype._update_others = function() {
 Chord.prototype._closest_preceding_finger = function(id) {
     var i;
     for (i = this._m; i >= 1; i--) {
-        if (inOpenInterval(this._fingerTable[i].node._id.number, this._id.number, id)) {
+        if (inOpenInterval(this._fingerTable[i].node._id, this._id, id)) {
             return this._fingerTable[i].node;
         }
     }

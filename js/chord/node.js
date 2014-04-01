@@ -1,3 +1,5 @@
+var BigInteger = require('../third_party/BigInteger');
+
 var Node = function(id, successor, dc, chord) {
     if (!(this instanceof Node)) {
         return new Node();
@@ -33,7 +35,7 @@ Node.prototype = {
     find_successor: function(id, cb) {
         this._send_request({
             type: this.message_types.FIND_SUCCESSOR,
-            id: id
+            id: id.toString()
         }, function(msg) {
             cb(msg.successor);
         });
@@ -43,8 +45,8 @@ Node.prototype = {
         this._send_request({
             type: this.message_types.GET_NODE_ID
         }, function(msg) {
-            this._id = msg.id;
-            cb(msg.id);
+            this._id = BigInteger(msg.id); // TODO(max) sanity checks
+            cb(this._id);
         }.bind(this));
     },
 
@@ -64,7 +66,7 @@ Node.prototype = {
     _send_node_id: function(seqnr) {
         var msg = {
             type: this.message_types.NODE_ID,
-            id: this._id,
+            id: this._id.toString(),
             seqnr: seqnr
         };
         this._send(msg);
