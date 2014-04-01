@@ -16,18 +16,18 @@ module.exports = function(grunt) {
                     define: true
                 }
             },
-            all: ["Gruntfile.js", "js/*.js"]
+            all: ["Gruntfile.js", "js/**/*.js"]
         },
 
         jsbeautifier: {
             verify: {
-                src: ['Gruntfile.js', 'js/*.js'],
+                src: ['Gruntfile.js', "js/**/*.js"],
                 options: {
                     mode: 'VERIFY_ONLY'
                 }
             },
             modify: {
-                src: ['Gruntfile.js', 'js/*.js']
+                src: ['Gruntfile.js', "js/**/*.js"]
             }
         },
 
@@ -39,7 +39,7 @@ module.exports = function(grunt) {
                     beautify: true
                 },
                 files: {
-                    'dist/boplish.min.js': ['js/*.js']
+                    'dist/boplish.min.js': ["js/**/*.js"]
                 }
             },
             production: {
@@ -50,7 +50,7 @@ module.exports = function(grunt) {
                     report: 'min'
                 },
                 files: {
-                    'dist/boplish.min.js': ['js/*.js']
+                    'dist/boplish.min.js': ["js/**/*.js"]
                 }
             }
         },
