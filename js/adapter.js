@@ -34,12 +34,16 @@ if (typeof(process) !== 'undefined' && process.title === 'node') {
 
     RTCPeerConnection = function() {
         webrtc.RTCPeerConnection.call(this);
-        var interval = setInterval(function(){
-            if (this.iceGatheringState === 'complete') {
-                clearInterval(interval);
-                this.onicecandidate(null);
-            };
-        }.bind(this), 1000); // miserable hack, waiting for https://github.com/js-platform/node-webrtc/issues/44
+        var that = this;
+        (function checkIceState(){
+            setTimeout(function(){
+                if (that.iceGatheringState === 'complete') {
+                    that.onicecandidate(null);
+                } else {
+                    checkIceState();
+                }
+            }, 1000).unref();
+        })(); // miserable hack, waiting for https://github.com/js-platform/node-webrtc/issues/44
     }
     util.inherits(RTCPeerConnection, webrtc.RTCPeerConnection);
 
@@ -72,7 +76,7 @@ if (typeof(process) !== 'undefined' && process.title === 'node') {
     util.inherits(WebSocket, WebSocketClient);
 
     GLOBAL.WebSocket = WebSocket;
-} else if (navigator.mozGetUserMedia) {
+} else if (typeof(navigator) !== 'undefined' && navigator.mozGetUserMedia) {
     console.log("This appears to be Firefox");
 
     webrtcDetectedBrowser = "firefox";
@@ -138,7 +142,7 @@ if (typeof(process) !== 'undefined' && process.title === 'node') {
     MediaStream.prototype.getAudioTracks = function() {
         return [];
     };
-} else if (navigator.webkitGetUserMedia) {
+} else if (typeof(navigator) !== 'undefined' && navigator.webkitGetUserMedia) {
     console.log("This appears to be Chrome");
 
     webrtcDetectedBrowser = "chrome";
