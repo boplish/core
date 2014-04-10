@@ -25,7 +25,7 @@ function trace(text) {
     console.log((performance.now() / 1000).toFixed(3) + ": " + text);
 }
 
-if (typeof(process) !== 'undefined' && process.title === 'node') {
+if (typeof(process) !== 'undefined' && typeof(module) !== 'undefined') {
     console.log("This appears to be Node.js");
 
     var webrtc = require('wrtc');

@@ -48,7 +48,7 @@ BOPlishClient.prototype = {
          * Returns an object with information about the browser in use
          */
         whatBrowserAmI: function() {
-            if (typeof(process) !== 'undefined' && process.title === 'node') {
+            if (typeof(process) !== 'undefined' && typeof(module) !== 'undefined') {
                 return {
                     vendor:'Node.js',
                     version: process.version
