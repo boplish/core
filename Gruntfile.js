@@ -1,9 +1,10 @@
 module.exports = function(grunt) {
     grunt.initConfig({
         jsdoc: {
-            src: ['js/*.js'],
+            src: ['js/'],
             options: {
-                destination: 'doc'
+                destination: 'doc',
+                recurse: true
             }
         },
 
@@ -15,18 +16,18 @@ module.exports = function(grunt) {
                     define: true
                 }
             },
-            all: ["Gruntfile.js", "js/*.js"]
+            all: ["Gruntfile.js", "js/**/*.js"]
         },
 
         jsbeautifier: {
             verify: {
-                src: ['Gruntfile.js', 'js/*.js'],
+                src: ['Gruntfile.js', "js/**/*.js"],
                 options: {
                     mode: 'VERIFY_ONLY'
                 }
             },
             modify: {
-                src: ['Gruntfile.js', 'js/*.js']
+                src: ['Gruntfile.js', "js/**/*.js"]
             }
         },
 
@@ -38,7 +39,7 @@ module.exports = function(grunt) {
                     beautify: true
                 },
                 files: {
-                    'dist/boplish.min.js': ['js/*.js']
+                    'dist/boplish.min.js': ["js/**/*.js"]
                 }
             },
             production: {
@@ -49,7 +50,7 @@ module.exports = function(grunt) {
                     report: 'min'
                 },
                 files: {
-                    'dist/boplish.min.js': ['js/*.js']
+                    'dist/boplish.min.js': ["js/**/*.js"]
                 }
             }
         },
@@ -58,12 +59,16 @@ module.exports = function(grunt) {
             options: {
                 ignoreLeaks: false,
                 ui: 'bdd',
-                reporter: 'dot'
+                reporter: 'spec'
             },
 
             all: {
                 src: ['test/*-test.js']
-            }
+            },
+
+            chord: {
+                src: ['test/chord-test.js']
+            },
         }
 
     });
@@ -74,7 +79,8 @@ module.exports = function(grunt) {
     grunt.loadNpmTasks('grunt-jsbeautifier');
     grunt.registerTask('beautify', 'jsbeautifier:modify');
     grunt.registerTask('verify', 'jsbeautifier:verify');
-    grunt.registerTask('test', 'simplemocha');
     grunt.registerTask('dist', 'uglify:production');
-    grunt.registerTask('default', ['jsdoc', 'jshint', 'simplemocha', 'beautify', 'uglify:production']);
+    grunt.registerTask('test', 'simplemocha:all');
+    grunt.registerTask('test:chord', 'simplemocha:chord');
+    grunt.registerTask('default', ['jsdoc', 'jshint', 'test', 'beautify', 'uglify:production']);
 };
