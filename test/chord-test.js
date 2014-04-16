@@ -79,6 +79,14 @@ describe('Chord', function() {
                 done();
             });
         });
+        it('should fill complete finger table', function(done) {
+            var c = new Chord({}, new Sha1(), 5);
+            c.join(null, function() {
+                // TODO(max): check individual entries
+                assert.equal(Object.keys(c._fingerTable).length, 5);
+                done();
+            });
+        });
     });
 });
 

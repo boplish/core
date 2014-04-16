@@ -79,7 +79,7 @@ Chord.prototype._init_finger_table = function(remote, successCallback) {
 };
 
 Chord.prototype._update_others = function() {
-
+    // TODO(max) implement
 };
 
 Chord.prototype._closest_preceding_finger = function(id) {
