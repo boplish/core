@@ -28,11 +28,11 @@ function trace(text) {
 if (typeof(process) !== 'undefined' && typeof(module) !== 'undefined') {
     console.log("This appears to be Node.js");
 
-    var webrtc = require('wrtc');
     var util = require('util');
+    var webrtc = require('wrtc');
     var WebSocketClient = require('websocket').client;
 
-    RTCPeerConnection = function() {
+    var RTCPeerConnection = function() {
         webrtc.RTCPeerConnection.call(this);
         var that = this;
         (function checkIceState(){
@@ -52,28 +52,48 @@ if (typeof(process) !== 'undefined' && typeof(module) !== 'undefined') {
     GLOBAL.RTCSessionDescription = webrtc.RTCSessionDescription;
     GLOBAL.DataChannel = webrtc.DataChannel;
 
-    WebSocket = function (url){
-        WebSocketClient.call(this);
-        this.onopen = function(){};
-        this.onerror = function(){};
-        this.onmessage = function(){};
-        this.send = function(){};
-        this.on('connect', function(connection){
+    var WebSocket = function(url) {
+        if (!(this instanceof WebSocket)) {
+            return new WebSocket(url);
+        }
+        var websocketClient = new WebSocketClient();
+        var that = this;
+        websocketClient.on('connect', function(connection){
             connection.on('message', function(msg){
                 msg.data = msg.utf8Data;
-                this.onmessage(msg);
-            }.bind(this));
-            this.send = function(msg) {
+                that.onmessage(msg);
+            });
+            that.send = function(msg) {
                 connection.send(msg);
             };
-            this.onopen();
         });
-        this.on('error', this.onerror);
-        process.nextTick(function(){ // break event loop to set onopen callback
-            this.connect(url)
-        }.bind(this));
+        websocketClient.on('connect', function(msg) {
+            that.onopen(msg);
+        });
+        websocketClient.on('error', function(err) {
+            that.onerror(err);
+        });
+        websocketClient.on('connectFailed', function(err) {
+            that.onerror(err);
+        });
+        websocketClient.on('close', function(err) {
+            that.onclose(msg);
+        });
+        setTimeout(function() { // break event loop to set callbacks
+            websocketClient.connect(url);
+        }, 0);
+
+        return this;
     }
-    util.inherits(WebSocket, WebSocketClient);
+
+    WebSocket.prototype = {
+        onopen: function(){},
+        onerror: function(err){},
+        onmessage: function(msg){},
+        onclose: function(msg){},
+        send: function(msg){},
+        close: function(){}
+    }
 
     GLOBAL.WebSocket = WebSocket;
 } else if (typeof(navigator) !== 'undefined' && navigator.mozGetUserMedia) {
