@@ -35,8 +35,8 @@ if (typeof(process) !== 'undefined' && typeof(module) !== 'undefined') {
     var RTCPeerConnection = function() {
         webrtc.RTCPeerConnection.call(this);
         var that = this;
-        (function checkIceState(){
-            setTimeout(function(){
+        (function checkIceState() {
+            setTimeout(function() {
                 if (that.iceGatheringState === 'complete') {
                     that.onicecandidate(null);
                 } else {
@@ -44,7 +44,7 @@ if (typeof(process) !== 'undefined' && typeof(module) !== 'undefined') {
                 }
             }, 1000).unref();
         })(); // miserable hack, waiting for https://github.com/js-platform/node-webrtc/issues/44
-    }
+    };
     util.inherits(RTCPeerConnection, webrtc.RTCPeerConnection);
 
     GLOBAL.RTCPeerConnection = RTCPeerConnection;
@@ -52,14 +52,14 @@ if (typeof(process) !== 'undefined' && typeof(module) !== 'undefined') {
     GLOBAL.RTCSessionDescription = webrtc.RTCSessionDescription;
     GLOBAL.DataChannel = webrtc.DataChannel;
 
-    var WebSocket = function(url) {
+    var CustomWebSocket = function(url) {
         if (!(this instanceof WebSocket)) {
-            return new WebSocket(url);
+            return new CustomWebSocket(url);
         }
         var websocketClient = new WebSocketClient();
         var that = this;
-        websocketClient.on('connect', function(connection){
-            connection.on('message', function(msg){
+        websocketClient.on('connect', function(connection) {
+            connection.on('message', function(msg) {
                 msg.data = msg.utf8Data;
                 that.onmessage(msg);
             });
@@ -84,18 +84,18 @@ if (typeof(process) !== 'undefined' && typeof(module) !== 'undefined') {
         }, 0);
 
         return this;
-    }
+    };
 
-    WebSocket.prototype = {
-        onopen: function(){},
-        onerror: function(err){},
-        onmessage: function(msg){},
-        onclose: function(msg){},
-        send: function(msg){},
-        close: function(){}
-    }
+    CustomWebSocket.prototype = {
+        onopen: function() {},
+        onerror: function(err) {},
+        onmessage: function(msg) {},
+        onclose: function(msg) {},
+        send: function(msg) {},
+        close: function() {}
+    };
 
-    GLOBAL.WebSocket = WebSocket;
+    GLOBAL.WebSocket = CustomWebSocket;
 } else if (typeof(navigator) !== 'undefined' && navigator.mozGetUserMedia) {
     console.log("This appears to be Firefox");
 

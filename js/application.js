@@ -50,9 +50,9 @@ BOPlishClient.prototype = {
         whatBrowserAmI: function() {
             if (typeof(process) !== 'undefined' && typeof(module) !== 'undefined') {
                 return {
-                    vendor:'Node.js',
+                    vendor: 'Node.js',
                     version: process.version
-                }
+                };
             }
             // source http://stackoverflow.com/questions/5916900/detect-version-of-browser
             var ua = navigator.userAgent,

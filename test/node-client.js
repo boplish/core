@@ -9,14 +9,15 @@ var ConnectionManager = require('../js/connectionmanager.js');
 var Peer = require('../js/peer.js');
 var BOPClient = require('../js/application.js');
 var sha1 = require('../js/sha1.js');
-var profiler = require('nodefly-v8-profiler');
 
-var winston = require('winston');
-winston.remove(winston.transports.Console);
-winston.add(winston.transports.Console, {'timestamp': true, 'colorize': true});
 var logger = require('winston');
-
 var program = require('commander');
+
+/** 
+ * Module configuration
+ */
+logger.remove(logger.transports.Console);
+logger.add(logger.transports.Console, {'timestamp': true, 'colorize': true});
 program
     .version('0.0.1')
     .option('-h, --host <ip>', 'Bootstrap Host address', String, '127.0.0.1')
@@ -33,6 +34,7 @@ function spawnBopClients(quantity, onsuccess, onerror) {
         }
         return;
     }
+
     var bopclient = new BOPlishClient(bootstrapNode, function(msg){
         logger.info(bopclient.id, 'spawned')
         process.nextTick(function(){
@@ -47,7 +49,7 @@ function spawnBopClients(quantity, onsuccess, onerror) {
 
 logger.info('Spawning ' + program.count + ' BOPlish client(s) using ' + bootstrapNode + ' as bootstrap server');
 spawnBopClients(
-    program.count, 
+    program.count,
     function(msg){
         logger.info('All BOPlish clients spawned');
     }, function(err){
