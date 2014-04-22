@@ -276,6 +276,8 @@ ConnectionManager.prototype = {
             this._bootstrap.pc = new RTCPeerConnection(this._pcoptions);
             this._bootstrap.dc = this._bootstrap.pc.createDataChannel(null, {});
             this._bootstrap.offerId = null;
+            this._bootstrap.onsuccess = function(){};
+            this._bootstrap.onsuccess();
         }
     },
 
