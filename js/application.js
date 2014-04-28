@@ -123,10 +123,13 @@ BOPlishClient.prototype = {
  * @callback BOPlishClient~onErrorCallback
  */
 
-
 /**
  * Invoked when a message has been received. Useful for monitoring the complete
  * traffic passing in/out of this peer.
  * @callback BOPlishClient~monitorCallback
  * @param message {Object} The raw message in router format.
  */
+
+if (typeof(module) !== 'undefined') {
+    module.exports = BOPlishClient;
+}
