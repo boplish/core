@@ -38,7 +38,9 @@ if (typeof(process) !== 'undefined' && typeof(module) !== 'undefined') {
         (function checkIceState() {
             setTimeout(function() {
                 if (that.iceGatheringState === 'complete') {
-                    that.onicecandidate(null);
+                    var nullCandidate = new RTCIceCandidate();
+                    nullCandidate.candidate = null;
+                    that.onicecandidate(nullCandidate);
                 } else {
                     checkIceState();
                 }
