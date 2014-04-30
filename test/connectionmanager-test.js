@@ -42,7 +42,7 @@ describe('ConnectionManager', function(){
             var router = {
                 registerDeliveryCallback: function() {},
                 route: function(to, type, msg) {
-                    assert.not.exist(to);
+                    to.should.equal('*');
                     type.should.equal('signaling-protocol');
                     msg.should.have.property('type', 'offer');
                     msg.should.have.property('sdp');

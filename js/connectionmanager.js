@@ -61,6 +61,7 @@ ConnectionManager.prototype = {
         this._state = 'bootstrapping';
         this._router = router;
         var pc = new RTCPeerConnection(null);
+        var to = '*';
         this._bootstrap = {
             pc: pc,
             dc: pc.createDataChannel(null, {}),
@@ -68,7 +69,7 @@ ConnectionManager.prototype = {
             onerror: errorCallback,
         };
         router.registerDeliveryCallback('signaling-protocol', this._onMessage.bind(this));
-        pc.createOffer(this._onCreateOfferSuccess.bind(this, pc, null, this._bootstrap),
+        pc.createOffer(this._onCreateOfferSuccess.bind(this, pc, to, this._bootstrap),
             this._onCreateOfferError.bind(this, errorCallback));
     },
 
@@ -142,6 +143,7 @@ ConnectionManager.prototype = {
             // TODO(max): check if we actually have a pending PC and ``drop'' is not set (glare).
             this._bootstrap.pc.setRemoteDescription(new RTCSessionDescription(desc));
             this._bootstrap.dc.onopen = function(ev) {
+                // nodejs wrtc-library does not include a channel reference in `ev.target`
                 this._router.addPeer(new Peer(from, this._bootstrap.pc, this._bootstrap.dc));
                 this._state = 'ready';
                 this._bootstrap.onsuccess();
@@ -154,7 +156,8 @@ ConnectionManager.prototype = {
             }
             pending.pc.setRemoteDescription(new RTCSessionDescription(desc));
             pending.dc.onopen = function(ev) {
-                var peer = new Peer(from, pending.pc, ev.target);
+                // nodejs wrtc-library does not include a channel reference in `ev.target`
+                var peer = new Peer(from, pending.pc, pending.dc);
                 this._router.addPeer(peer);
                 if (typeof(pending.onsuccess) === 'function') {
                     // TODO(max): would it make sense to pass the remote peer's
@@ -200,8 +203,9 @@ ConnectionManager.prototype = {
             }
             this._bootstrap.pc.setRemoteDescription(new RTCSessionDescription(desc));
             this._bootstrap.pc.ondatachannel = function(ev) {
-                ev.channel.onopen = function(ev) {
-                    var peer = new Peer(from, this._bootstrap.pc, ev.target);
+                ev.channel.onopen = function(ev2) {
+                    // nodejs wrtc-library does not include a channel reference in `ev2.target`
+                    var peer = new Peer(from, this._bootstrap.pc, ev.channel);
                     this._router.addPeer(peer);
                     this._state = 'ready';
                     this._bootstrap.onsuccess();
@@ -232,8 +236,9 @@ ConnectionManager.prototype = {
             this._pending[from] = pendingOffer || {};
             this._pending[from].pc = pc;
             pc.ondatachannel = function(ev) {
-                ev.channel.onopen = function(ev) {
-                    var peer = new Peer(from, pc, ev.target);
+                ev.channel.onopen = function(ev2) {
+                    // nodejs wrtc-library does not include a channel reference in `ev2.target`
+                    var peer = new Peer(from, pc, ev.channel);
                     this._router.addPeer(peer);
                     if (typeof(this._pending[from].onsuccess) === 'function') {
                         this._pending[from].onsuccess();
@@ -272,6 +277,8 @@ ConnectionManager.prototype = {
             this._bootstrap.pc = new RTCPeerConnection(this._pcoptions);
             this._bootstrap.dc = this._bootstrap.pc.createDataChannel(null, {});
             this._bootstrap.offerId = null;
+            this._bootstrap.onsuccess();
+            this._bootstrap.onsuccess = function() {};
         }
     },
 

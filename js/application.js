@@ -19,6 +19,8 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
         // we are on FF
     } else if (browser.vendor === 'Chrome' && Number(browser.version.slice(0, 2)) >= 33) {
         // we are on Chrome
+    } else if (browser.vendor === 'Node.js') {
+        // we are on Node.js
     } else {
         errorCallback('You will not be able to use BOPlish as your browser is currently incompatible. Please use either Firefox 26 or Chrome 33 upwards.');
         return;
@@ -46,6 +48,12 @@ BOPlishClient.prototype = {
          * Returns an object with information about the browser in use
          */
         whatBrowserAmI: function() {
+            if (typeof(process) !== 'undefined' && typeof(module) !== 'undefined') {
+                return {
+                    vendor: 'Node.js',
+                    version: process.version
+                };
+            }
             // source http://stackoverflow.com/questions/5916900/detect-version-of-browser
             var ua = navigator.userAgent,
                 N = navigator.appName,
@@ -115,10 +123,13 @@ BOPlishClient.prototype = {
  * @callback BOPlishClient~onErrorCallback
  */
 
-
 /**
  * Invoked when a message has been received. Useful for monitoring the complete
  * traffic passing in/out of this peer.
  * @callback BOPlishClient~monitorCallback
  * @param message {Object} The raw message in router format.
  */
+
+if (typeof(module) !== 'undefined') {
+    module.exports = BOPlishClient;
+}

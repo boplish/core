@@ -9,10 +9,6 @@ connection maintenance and routing.
 For some demo applications using BOPlish refer to
     [https://github.com/boplish/demos/](https://github.com/boplish/demos/).
 
-This library currently only works on Firefox since DataChannel interoperation
-between Firefox and Chrome doesn't work, yet. For interop progress have a look
-at https://code.google.com/p/webrtc/issues/detail?id=2279.
-
 Requirements
 ============
 
@@ -42,3 +38,8 @@ the bootstrap signaling protocol that BOPlish mandates. This is
 
 The bootstrap server holds WebSocket connections to existing peers in the boplish network in
 order to help joining peers find initial neighbours.
+
+Demo
+=======
+
+Visit [http://chris.ac:5000](http://chris.ac:5000) using a supported browser for a demo.

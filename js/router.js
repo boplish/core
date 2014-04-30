@@ -73,7 +73,7 @@ Router.prototype = {
         try {
             this.forward(JSON.parse(msg.data));
         } catch (e) {
-            throw Error('Unable to parse incoming message ' + JSON.stringify(msg.data) + ': ' + e);
+            console.log('Unable to parse incoming message ' + JSON.stringify(msg.data) + ': ' + e);
         }
     },
 
@@ -104,6 +104,9 @@ Router.prototype = {
         if (typeof(this._monitorCallback) === 'function') {
             this._monitorCallback(msg);
         }
+        if (!msg.to) {
+            throw Error('Unable to route message because no recipient can be determined');
+        }
         if (this._id === msg.to) {
             this.deliver(msg);
             return;
@@ -116,7 +119,7 @@ Router.prototype = {
         try {
             receiver.dataChannel.send(JSON.stringify(msg));
         } catch (e) {
-            throw Error('Unable to route message to ' + msg.to + ' because the DataChannel connection failed.');
+            console.log('Unable to route message to ' + msg.to + ' because the DataChannel connection failed.');
         }
     },
 
@@ -130,10 +133,10 @@ Router.prototype = {
      * @param msg {String}
      */
     deliver: function(msg) {
-        if (!this._messageCallbacks[msg.type]) {
-            throw Error('Unable to handle message of type ' + msg.type + ' from ' + msg.from + ' because no callback is registered.');
-        } else {
+        try {
             this._messageCallbacks[msg.type](msg.payload, msg.from);
+        } catch (e) {
+            console.log('Unable to handle message of type ' + msg.type + ' from ' + msg.from + ' because no callback is registered: ' + e);
         }
     },
 
