@@ -14,5 +14,8 @@
     "websocket": "~1.0.8",
     "grunt-jsbeautifier": "~0.2.6",
     "winston": "~0.7.2"
+  },
+  "scripts": {
+    "test": "grunt test"
   }
 }
