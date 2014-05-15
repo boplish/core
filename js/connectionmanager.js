@@ -69,7 +69,7 @@ ConnectionManager.prototype = {
             onerror: errorCallback,
         };
         router.registerDeliveryCallback('signaling-protocol', this._onMessage.bind(this));
-        pc.createOffer(this._onCreateOfferSuccess.bind(this, pc, to, this._bootstrap),
+        pc.createOffer(this._onCreateOfferSuccess.bind(this, pc, to, this._bootstrap, errorCallback),
             this._onCreateOfferError.bind(this, errorCallback));
     },
 
@@ -102,7 +102,7 @@ ConnectionManager.prototype = {
             this._onCreateOfferError.bind(this, errorCallback));
     },
 
-    _onCreateOfferSuccess: function(pc, to, pendingOffer, sessionDesc) {
+    _onCreateOfferSuccess: function(pc, to, pendingOffer, errorCallback, sessionDesc) {
         if (pendingOffer.drop) {
             return;
         }
@@ -110,7 +110,9 @@ ConnectionManager.prototype = {
             if (pc.iceGatheringState === 'complete' || iceEvent.candidate === null) {
                 // spec specifies that a null candidate means that the ice gathering is complete
                 pc.onicecandidate = function() {};
-                this._router.route(to, 'signaling-protocol', pc.localDescription);
+                pc.createOffer(function(offer) {
+                    this._router.route(to, 'signaling-protocol', offer);
+                }.bind(this), this._onCreateOfferError.bind(this, errorCallback));
             }
         }.bind(this);
         pendingOffer.offerId = this.utils.findSessionId(sessionDesc.sdp);
