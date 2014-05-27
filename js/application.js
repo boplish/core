@@ -5,8 +5,9 @@
  * @class This is the top-level API for BOPlish applications. It should be the
  * only interface used for interacting with the P2P network.
  * @param bootstrapHost {String} Name and port of the host running the signaling
- * server. The format is 'HOSTNAME[:PORT]'. If this is undefined or null then
- * the host of the serving application is used.
+ * server. The format is 'ws[s]://HOSTNAME[:PORT][/]'. If this is undefined or null then
+ * the host of the serving application is used. Using the `wss` scheme for tls encrypted
+ * communication to the `bootstrapHost` is highly recommended.
  * @param successCallback {BOPlishClient~onSuccessCallback} Called when a
  * connection to the P2P network has been established.
  * @param errorCallback {BOPlishClient~onErrorCallback} Called when a connection
@@ -27,12 +28,21 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     }
 
     this.id = sha1.hash(Math.random().toString());
-    bootstrapHost = bootstrapHost || window.location.host;
+    var bootstrapHost = bootstrapHost || window.location.host;
 
-    var channel = new WebSocket('ws://' + bootstrapHost + '/ws/' + this.id);
-    channel.onerror = function(err) {
-        errorCallback(err);
+    if (bootstrapHost.substring(0, bootstrapHost.length - 1) !== '/') { // add trailing slash if missing
+        bootstrapHost += '/';
+    }
+    if (bootstrapHost.substring(0, 6) !== 'wss://' || bootstrapHost.substring(0, 5) !== 'ws://') { // check syntax
+        errorCallback('Syntax error in bootstrapHost parameter');
+        return;
+    }
+    var channel = new WebSocket(bootstrapHost + 'ws/' + this.id);
+
+    channel.onerror = function(ev) {
+        errorCallback('Failed to open connection to bootstrap server:' + bootstrapHost + ': ' + ev);
     };
+
     channel.onopen = function() {
         this._connectionManager.bootstrap(this._router, successCallback, errorCallback);
     }.bind(this);
