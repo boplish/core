@@ -1,8 +1,18 @@
 var assert = require("should");
-var Application = require('../js/application.js');
+var BOPlishClient = require('../js/application.js');
 
 describe('Application', function(){
     describe('#constructor()', function(){
-        it('should return an instance');
+        it('should return an instance', function(){
+        	var boplishClient = new BOPlishClient('test', function(){}, function(){});
+        	boplishClient.should.be.an.instanceof(BOPlishClient);
+        });
+        it('should check bootstrap host syntax', function(done){
+        	var boplishClient = new BOPlishClient('test', function(){}, function(msg){
+        		if (msg === 'Syntax error in bootstrapHost parameter') {
+        			done();	
+        		}
+        	});
+        });
     });
 });
