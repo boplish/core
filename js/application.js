@@ -14,6 +14,9 @@
  * to the P2P network could not be established (e.g. if the WebSocket connection
  * to the bootstrapHost failed.
  */
+
+var Sha1 = require('./third_party/sha1');
+
 BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     var browser = this.utils.whatBrowserAmI();
     if (browser.vendor === 'Firefox' && Number(browser.version.slice(0, 2)) >= 26) {
@@ -24,7 +27,7 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
         // we are on Node.js
     } else {
         errorCallback('You will not be able to use BOPlish as your browser is currently incompatible. Please use either Firefox 26 or Chrome 33 upwards.');
-        return;
+      return;
     }
 
     this.id = sha1.hash(Math.random().toString());
@@ -44,7 +47,7 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     };
 
     channel.onopen = function() {
-        this._connectionManager.bootstrap(this._router, successCallback, errorCallback);
+        // TODO Join the Chord.
     }.bind(this);
 
     this._connectionManager = new ConnectionManager();

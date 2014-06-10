@@ -1,4 +1,8 @@
 module.exports = function(grunt) {
+
+      // Load grunt tasks automatically
+    require('load-grunt-tasks')(grunt);
+
     grunt.initConfig({
         jsdoc: {
             src: ['js/*.js'],
@@ -38,7 +42,7 @@ module.exports = function(grunt) {
                     beautify: true
                 },
                 files: {
-                    'dist/boplish.min.js': ['js/*.js']
+                    'dist/boplish.js': ["dist/*.js"]
                 }
             },
             production: {
@@ -49,11 +53,52 @@ module.exports = function(grunt) {
                     report: 'min'
                 },
                 files: {
-                    'dist/boplish.min.js': ['js/*.js']
+                    'dist/boplish.min.js': ["dist/*.js"]
                 }
             }
         },
-
+        copy: {
+            dist: {
+                files: [{
+                    expand: true,
+                    dot: true,
+                    cwd: 'js',
+                    dest: 'dist',
+                    src: [
+                      '*.js',
+                    ]
+                }]
+            }
+        },
+        // Empties folders to start fresh
+        clean: {
+            dist: {
+                files: [{
+                    dot: true,
+                    src: [
+                        'dist/*',
+                    ]
+                }]
+            }
+        },
+        browserify: {
+            debug: {
+                files: {
+                    'dist/chord.js': ['js/chord/chord.js'],
+                    'dist/node.js': ['js/chord/node.js'],
+                    'dist/third_party.js': ['js/third_party/*.js'],
+                    'dist/application.js': ['js/application.js']
+                },
+            },
+            dist: {
+                files: {
+                    'dist/chord.js': ['js/chord/chord.js'],
+                    'dist/node.js': ['js/chord/node.js'],
+                    'dist/third_party.js': ['js/third_party/*.js'],
+                    'dist/application.js': ['js/application.js']
+                },
+            }
+        },
         simplemocha: {
             options: {
                 ignoreLeaks: false,
@@ -67,14 +112,12 @@ module.exports = function(grunt) {
         }
 
     });
-    grunt.loadNpmTasks('grunt-jsdoc');
-    grunt.loadNpmTasks('grunt-contrib-jshint');
-    grunt.loadNpmTasks('grunt-contrib-uglify');
-    grunt.loadNpmTasks('grunt-simple-mocha');
-    grunt.loadNpmTasks('grunt-jsbeautifier');
+
     grunt.registerTask('beautify', 'jsbeautifier:modify');
     grunt.registerTask('verify', 'jsbeautifier:verify');
-    grunt.registerTask('test', 'simplemocha');
-    grunt.registerTask('dist', 'uglify:production');
-    grunt.registerTask('default', ['jsdoc', 'jshint', 'simplemocha', 'beautify', 'uglify:production']);
+    grunt.registerTask('dist', ['clean', 'copy', 'browserify:dist', 'uglify:production']);
+    grunt.registerTask('debug', ['clean', 'copy', 'browserify:debug', 'uglify:debug']);
+    grunt.registerTask('test', 'simplemocha:all');
+    grunt.registerTask('test:chord', 'simplemocha:chord');
+    grunt.registerTask('default', ['jsdoc', 'jshint', 'test', 'beautify', 'uglify:production']);
 };
