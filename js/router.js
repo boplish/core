@@ -8,7 +8,7 @@
  * @param id ID of the local peer
  * @param fallbackSignaling
  */
-Router = function(id, fallbackSignaling, connectionManager) {
+var Router = function(id, fallbackSignaling, connectionManager) {
     if (!(this instanceof Router)) {
         return new Router();
     }

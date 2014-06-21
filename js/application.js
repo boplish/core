@@ -1,5 +1,9 @@
 /** @fileOverview API for application developers. */
 
+var ConnectionManager = require('./connectionmanager.js');
+var Router = require('./router.js');
+var sha1 = require('./sha1.js');
+
 /**
  * @constructor
  * @class This is the top-level API for BOPlish applications. It should be the
@@ -14,10 +18,7 @@
  * to the P2P network could not be established (e.g. if the WebSocket connection
  * to the bootstrapHost failed.
  */
-
-var Sha1 = require('./third_party/sha1');
-
-BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
+var BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     var browser = this.utils.whatBrowserAmI();
     if (browser.vendor === 'Firefox' && Number(browser.version.slice(0, 2)) >= 26) {
         // we are on FF
@@ -27,11 +28,11 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
         // we are on Node.js
     } else {
         errorCallback('You will not be able to use BOPlish as your browser is currently incompatible. Please use either Firefox 26 or Chrome 33 upwards.');
-      return;
+        return;
     }
 
     this.id = sha1.hash(Math.random().toString());
-    var bootstrapHost = bootstrapHost || window.location.host;
+    bootstrapHost = bootstrapHost || window.location.host;
 
     if (bootstrapHost.substring(0, bootstrapHost.length - 1) !== '/') { // add trailing slash if missing
         bootstrapHost += '/';

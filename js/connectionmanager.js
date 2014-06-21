@@ -1,11 +1,13 @@
 /** @fileOverview Mid-level connection broking and signaling functionality. */
 
+var Peer = require('./peer.js');
+
 /**
  * @constructor
  * @class Handles the connection establishment to other nodes as
  * well as joining a network (bootstrapping).
  */
-ConnectionManager = function() {
+var ConnectionManager = function() {
     if (!(this instanceof ConnectionManager)) {
         return new ConnectionManager();
     }
