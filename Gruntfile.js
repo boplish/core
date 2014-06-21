@@ -1,6 +1,6 @@
 module.exports = function(grunt) {
 
-      // Load grunt tasks automatically
+    // Load grunt tasks automatically
     require('load-grunt-tasks')(grunt);
 
     grunt.initConfig({
@@ -57,6 +57,7 @@ module.exports = function(grunt) {
                 }
             }
         },
+
         copy: {
             dist: {
                 files: [{
@@ -65,11 +66,12 @@ module.exports = function(grunt) {
                     cwd: 'js',
                     dest: 'dist',
                     src: [
-                      '*.js',
+                        '*.js',
                     ]
                 }]
             }
         },
+
         // Empties folders to start fresh
         clean: {
             dist: {
@@ -81,24 +83,23 @@ module.exports = function(grunt) {
                 }]
             }
         },
+
         browserify: {
             debug: {
                 files: {
-                    'dist/chord.js': ['js/chord/chord.js'],
-                    'dist/node.js': ['js/chord/node.js'],
-                    'dist/third_party.js': ['js/third_party/*.js'],
-                    'dist/application.js': ['js/application.js']
+                    'dist/boplish-browserified-debug.js': ['js/*.js']
                 },
             },
             dist: {
                 files: {
-                    'dist/chord.js': ['js/chord/chord.js'],
-                    'dist/node.js': ['js/chord/node.js'],
-                    'dist/third_party.js': ['js/third_party/*.js'],
-                    'dist/application.js': ['js/application.js']
+                    'dist/boplish-browserified-dist.js': ['js/*.js']
                 },
+                options: {
+                    transform: ['uglifyify']
+                }
             }
         },
+
         simplemocha: {
             options: {
                 ignoreLeaks: false,
@@ -110,14 +111,13 @@ module.exports = function(grunt) {
                 src: ['test/*-test.js']
             }
         }
-
     });
 
     grunt.registerTask('beautify', 'jsbeautifier:modify');
     grunt.registerTask('verify', 'jsbeautifier:verify');
-    grunt.registerTask('dist', ['clean', 'copy', 'browserify:dist', 'uglify:production']);
-    grunt.registerTask('debug', ['clean', 'copy', 'browserify:debug', 'uglify:debug']);
+    grunt.registerTask('dist', ['clean', 'browserify:dist']);
+    grunt.registerTask('debug', ['clean', 'browserify:debug']);
     grunt.registerTask('test', 'simplemocha:all');
     grunt.registerTask('test:chord', 'simplemocha:chord');
-    grunt.registerTask('default', ['jsdoc', 'jshint', 'test', 'beautify', 'uglify:production']);
+    grunt.registerTask('default', ['jsdoc', 'jshint', 'test', 'beautify', 'dist']);
 };
