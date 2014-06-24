@@ -21,3 +21,5 @@
 *.swp
 *~
 .ftppass
+
+.sublime-grunt.cache
