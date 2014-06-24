@@ -1,5 +1,7 @@
 /** @fileOverview Routing functionality */
 
+var Peer = require('./peer.js');
+
 /**
  * @constructor
  * @class The main routing class. Used by {@link ConnectionManager} instances to route

@@ -10,7 +10,7 @@
  * @param peerConnection {RTCPeerConnection} The PeerConnection to the remote peer.
  * @param dataChannel {DataChannel} The DataChannel to the remote peer.
  */
-Peer = function(id, peerConnection, dataChannel) {
+var Peer = function(id, peerConnection, dataChannel) {
     if (!(this instanceof Peer)) {
         return new Peer(id, peerConnection, dataChannel);
     }

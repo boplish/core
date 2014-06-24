@@ -10,12 +10,12 @@
  * </p>
  */
 
-var RTCPeerConnection = null;
-var getUserMedia = null;
-var attachMediaStream = null;
-var reattachMediaStream = null;
-var webrtcDetectedBrowser = null;
-var webrtcDetectedVersion = null;
+RTCPeerConnection = null;
+getUserMedia = null;
+attachMediaStream = null;
+reattachMediaStream = null;
+webrtcDetectedBrowser = null;
+webrtcDetectedVersion = null;
 
 /* This part is node.js specific and needs to be moved to the node.js client
 if (typeof(process) !== 'undefined' && typeof(module) !== 'undefined') {

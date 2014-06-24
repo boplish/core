@@ -18,7 +18,7 @@ var sha1 = require('./sha1.js');
  * to the P2P network could not be established (e.g. if the WebSocket connection
  * to the bootstrapHost failed.
  */
-var BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
+BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     var browser = this.utils.whatBrowserAmI();
     if (browser.vendor === 'Firefox' && Number(browser.version.slice(0, 2)) >= 26) {
         // we are on FF
@@ -34,10 +34,10 @@ var BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     this.id = sha1.hash(Math.random().toString());
     bootstrapHost = bootstrapHost || window.location.host;
 
-    if (bootstrapHost.substring(0, bootstrapHost.length - 1) !== '/') { // add trailing slash if missing
+    if (bootstrapHost.substring(bootstrapHost.length - 1, bootstrapHost.length) !== '/') { // add trailing slash if missing
         bootstrapHost += '/';
     }
-    if (bootstrapHost.substring(0, 6) !== 'wss://' || bootstrapHost.substring(0, 5) !== 'ws://') { // check syntax
+    if (bootstrapHost.substring(0, 6) !== 'wss://' && bootstrapHost.substring(0, 5) !== 'ws://') { // check syntax
         errorCallback('Syntax error in bootstrapHost parameter');
         return;
     }
@@ -48,7 +48,7 @@ var BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     };
 
     channel.onopen = function() {
-        // TODO Join the Chord.
+        this._connectionManager.bootstrap(this._router, successCallback, errorCallback);
     }.bind(this);
 
     this._connectionManager = new ConnectionManager();
