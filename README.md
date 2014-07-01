@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/boplish/core.png)](https://travis-ci.org/boplish/core)
+
 BOPlish Core
 ============
 
