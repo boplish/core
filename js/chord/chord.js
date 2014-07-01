@@ -1,3 +1,5 @@
+var ChordNode = require('./node.js');
+
 /** @fileOverview Chord DHT implementation */
 
 /**
@@ -7,7 +9,7 @@
  * @param connectionManager {ConnectionManager} The connection manager instance
  * to be used for requesting data channel connections.
  */
-Chord = function(connectionManager, hash, keyLength) {
+var Chord = function(connectionManager, hash, keyLength) {
     if (!(this instanceof Chord)) {
         return new Chord(connectionManager, hash, keyLength);
     }
