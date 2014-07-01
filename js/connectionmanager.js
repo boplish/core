@@ -5,10 +5,11 @@
  * @class Handles the connection establishment to other nodes as
  * well as joining a network (bootstrapping).
  */
-ConnectionManager = function() {
+ConnectionManager = function(fallbackSignaling) {
     if (!(this instanceof ConnectionManager)) {
-        return new ConnectionManager();
+        return new ConnectionManager(fallbackSignaling);
     }
+    this._fallbackSignaling = fallbackSignaling;
     this._bootstrap = null;
     this._pending = {};
     this._connections = {};
@@ -119,6 +120,14 @@ ConnectionManager.prototype = {
         pc.setLocalDescription(sessionDesc);
     },
 
+    _route: function(to, type, payload) {
+        if (this._state === 'bootstrapping') {
+            this._router.route(to, type, payload, this._fallbackSignaling);
+        } else {
+            this._router.route(to, type, payload);
+        }
+    },
+
     _onCreateOfferError: function(errorCallback, error) {
         // TODO(max): clean up state (delete PC object etc.)
         errorCallback(error);
@@ -176,7 +185,7 @@ ConnectionManager.prototype = {
         // if we're already connected or are already processing an offer from
         // this peer, deny this offer
         if (this._connections[from] !== undefined || this._pending[from] !== undefined) {
-            this._router.route(from, 'signaling-protocol', {
+            this._route(from, 'signaling-protocol', {
                 type: 'denied'
             });
         }
@@ -258,7 +267,7 @@ ConnectionManager.prototype = {
             if (pc.iceGatheringState === 'complete' || iceEvent.candidate === null) {
                 // spec specifies that a null candidate means that the ice gathering is complete
                 pc.onicecandidate = function() {};
-                this._router.route(to, 'signaling-protocol', pc.localDescription);
+                this._route(to, 'signaling-protocol', pc.localDescription);
             }
         }.bind(this);
         pc.setLocalDescription(new RTCSessionDescription(sessionDesc));

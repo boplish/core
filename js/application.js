@@ -28,7 +28,8 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     }
 
     this.id = sha1.hash(Math.random().toString());
-    var bootstrapHost = bootstrapHost || window.location.host;
+    this._connectionManager = new ConnectionManager();
+    bootstrapHost = bootstrapHost || window.location.host;
 
     if (bootstrapHost.substring(0, bootstrapHost.length - 1) !== '/') { // add trailing slash if missing
         bootstrapHost += '/';
@@ -47,7 +48,6 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
         this._connectionManager.bootstrap(this._router, successCallback, errorCallback);
     }.bind(this);
 
-    this._connectionManager = new ConnectionManager();
     this._router = new Router(this.id, channel, this._connectionManager);
 };
 

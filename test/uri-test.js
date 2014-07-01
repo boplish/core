@@ -11,14 +11,16 @@ describe('BopURI', function() {
             uri2.should.be.an.instanceof(BopURI);
         });
         it('should throw with invalid parameter', function() {
-            (function () {
+            (function() {
                 var uri = new BopURI('test');
-            }).should.throw();
-            (function () {
+            }).should.
+            throw ();
+            (function() {
                 var uri = new BopURI();
-            }).should.throw();
+            }).should.
+            throw ();
         });
-        it('should fill fields correctly', function () {
+        it('should fill fields correctly', function() {
             var uri = new BopURI('bop:max@example.org:documents/img/test.png?csum=sha256:aa:bb:cc');
             uri.should.have.property('scheme', 'bop');
             uri.should.have.property('uid', 'max@example.org');

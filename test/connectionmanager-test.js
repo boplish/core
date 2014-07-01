@@ -1,6 +1,6 @@
 var assert = require("should");
 require('./adapter-mock.js');
-require('../js/sha1.js');
+require('../js/third_party/sha1.js');
 var sinon = require('sinon');
 var ConnectionManager = require('../js/connectionmanager.js');
 
@@ -9,17 +9,17 @@ var RouterAPI = {
     route: function() {}
 };
 
-describe('ConnectionManager', function(){
-    describe('#constructor()', function(){
-        it('should return an instance', function(){
+describe('ConnectionManager', function() {
+    describe('#constructor()', function() {
+        it('should return an instance', function() {
             var pm = new ConnectionManager();
             pm.should.be.an.instanceof(ConnectionManager);
             pm = ConnectionManager();
             pm.should.be.an.instanceof(ConnectionManager);
         });
         it('should set the correct state', function() {
-           var cm = new ConnectionManager();
-           cm.should.have.property('_state', 'uninitialized');
+            var cm = new ConnectionManager();
+            cm.should.have.property('_state', 'uninitialized');
         });
     });
     describe('#bootstrap()', function() {
