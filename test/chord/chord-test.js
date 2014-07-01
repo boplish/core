@@ -1,10 +1,11 @@
 var assert = require('should');
 var sinon = require('sinon');
 var Chord = require('../../js/chord/chord.js');
-var Node = require('../../js/chord/node.js');
+var ChordNode = require('../../js/chord/node.js');
 var DataChannel = require('../adapter-mock.js').DataChannel;
 var Sha1 = require('../../js/third_party/sha1');
 var BigInt = require('../../js/third_party/BigInteger');
+var Peer = require('../../js/peer.js');
 
 function mock_dcs() {
     var dc_in = {
@@ -99,8 +100,8 @@ describe('Node', function() {
     describe('message handling', function() {
         it('should return successor', function(done) {
             var dcs = mock_dcs();
-            var n_in = new Node(0, null, null, dcs[0], null);
-            var n_out = new Node(1, null, null, dcs[1], null);
+            var n_in = new ChordNode(0, null, null, dcs[0], null);
+            var n_out = new ChordNode(1, null, null, dcs[1], null);
             n_in.find_successor(2, function(succ) {
                 if (succ === null) {
                     done();
@@ -108,7 +109,7 @@ describe('Node', function() {
             });
         });
         it('should handle unexpected requests gracefully', function() {
-            var n = new Node(0, null, null, {}, null);
+            var n = new ChordNode(0, null, null, {}, null);
 
             function msg(obj) {
                 return {
@@ -133,8 +134,8 @@ describe('Node', function() {
     describe('get_node_id', function() {
         it('should return and set the correct ID', function(done) {
             var dcs = mock_dcs();
-            var n1 = new Node(null, null, null, dcs[0], null);
-            var n2 = new Node(BigInt(1), null, null, dcs[1], null);
+            var n1 = new ChordNode(null, null, null, dcs[0], null);
+            var n2 = new ChordNode(BigInt(1), null, null, dcs[1], null);
             n1.get_node_id(function(id) {
                 assert.ok(id.equals(BigInt(1)));
                 assert.equal(n1._id, id);
@@ -144,8 +145,8 @@ describe('Node', function() {
         });
         it('should return the same ID upon subsequent calls', function(done) {
             var dcs = mock_dcs();
-            var n1 = new Node(null, null, null, dcs[0], null);
-            var n2 = new Node(BigInt(1), null, null, dcs[1], null);
+            var n1 = new ChordNode(null, null, null, dcs[0], null);
+            var n2 = new ChordNode(BigInt(1), null, null, dcs[1], null);
             var id1;
             n1.get_node_id(function(id) {
                 id1 = id;
@@ -159,8 +160,8 @@ describe('Node', function() {
         it('should cache the ID', function() {
             var dcs = mock_dcs();
             sinon.spy(dcs[0], 'send');
-            var n1 = new Node(null, null, null, dcs[0], null);
-            var n2 = new Node(BigInt(1), null, null, dcs[1], null);
+            var n1 = new ChordNode(null, null, null, dcs[0], null);
+            var n2 = new ChordNode(BigInt(1), null, null, dcs[1], null);
             n1.get_node_id(function() {});
             n1.get_node_id(function() {});
             assert.ok(dcs[0].send.calledOnce);
@@ -170,7 +171,7 @@ describe('Node', function() {
         it('should send the correct message', function() {
             var dc = new DataChannel();
             var dcStub = sinon.stub(dc, 'send');
-            var n = new Node(0, null, null, dc, null);
+            var n = new ChordNode(0, null, null, dc, null);
             n.find_successor(1);
             sinon.assert.calledWith(dcStub, JSON.stringify({
                 type: n.message_types.FIND_SUCCESSOR,
@@ -204,7 +205,7 @@ describe('Node', function() {
                     }, 20);
                 }
             };
-            var n = new Node(0, null, null, dc, null);
+            var n = new ChordNode(0, null, null, dc, null);
             var oks = 0;
 
             function find_successor(id, expected) {

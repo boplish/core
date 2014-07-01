@@ -1,6 +1,3 @@
-var Node = require('./node');
-var BigInt = require('../third_party/BigInteger');
-
 /** @fileOverview Chord DHT implementation */
 
 /**
@@ -10,7 +7,7 @@ var BigInt = require('../third_party/BigInteger');
  * @param connectionManager {ConnectionManager} The connection manager instance
  * to be used for requesting data channel connections.
  */
-var Chord = function(connectionManager, hash, keyLength) {
+Chord = function(connectionManager, hash, keyLength) {
     if (!(this instanceof Chord)) {
         return new Chord(connectionManager, hash, keyLength);
     }
@@ -24,7 +21,7 @@ var Chord = function(connectionManager, hash, keyLength) {
     this._fingerTable = {};
     this._m = keyLength;
     this._joined = false; // are we joined to a Chord ring, yet?
-    this._localNode = new Node(new Peer(this._id, null, {
+    this._localNode = new ChordNode(new Peer(this._id, null, {
         send: this._onmessage
     }), this);
 
@@ -136,7 +133,7 @@ Chord.prototype.add_peer = function(dc) {};
 /**
  * join the DHT by using the 'bootstrap' node
  *
- * @param bootstrap {Node} instance of the bootstrap host
+ * @param bootstrap {ChordNode} instance of the bootstrap host
  * @param successCallback {Chord~joinCallback} called after the join operation has been
  * carried out successfully.
  */
@@ -162,7 +159,7 @@ Chord.prototype._join = function(bootstrap, successCallback) {
  * @param dc DataChannel connection to remote peer
  */
 Chord.prototype.addPeer = function(peer) {
-    var node = new Node(peer, this);
+    var node = new ChordNode(peer, this);
     peer.dataChannel.onmessage = this.onmessage.bind(this);
     // TODO: implement removing peer/updating finger table
     peer.peerConnection.onclosedconnection = this.removePeer.bind(this, peer);

@@ -1,8 +1,6 @@
-var BigInteger = require('../third_party/BigInteger');
-
-var Node = function(peer, chord) {
-    if (!(this instanceof Node)) {
-        return new Node(peer, chord);
+ChordNode = function(peer, chord) {
+    if (!(this instanceof ChordNode)) {
+        return new ChordNode(peer, chord);
     }
 
     this._peer = peer;
@@ -17,7 +15,7 @@ var Node = function(peer, chord) {
     return this;
 };
 
-Node.prototype = {
+ChordNode.prototype = {
 
     /**
      * Public API
@@ -120,5 +118,5 @@ Node.prototype = {
 
 
 if (typeof(module) !== 'undefined') {
-    module.exports = Node;
+    module.exports = ChordNode;
 }
