@@ -1,5 +1,7 @@
 /** @fileOverview Routing functionality */
 
+var Peer = require('./peer.js');
+
 /**
  * @constructor
  * @class The main routing class. Used by {@link ConnectionManager} instances to route
@@ -8,7 +10,7 @@
  * @param id ID of the local peer
  * @param fallbackSignaling
  */
-Router = function(id, fallbackSignaling, connectionManager) {
+var Router = function(id, fallbackSignaling, connectionManager) {
     if (!(this instanceof Router)) {
         return new Router();
     }

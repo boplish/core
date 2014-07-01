@@ -10,21 +10,14 @@
  * </p>
  */
 
-var RTCPeerConnection = null;
-var getUserMedia = null;
-var attachMediaStream = null;
-var reattachMediaStream = null;
-var webrtcDetectedBrowser = null;
-var webrtcDetectedVersion = null;
+RTCPeerConnection = null;
+getUserMedia = null;
+attachMediaStream = null;
+reattachMediaStream = null;
+webrtcDetectedBrowser = null;
+webrtcDetectedVersion = null;
 
-function trace(text) {
-    // This function is used for logging.
-    if (text[text.length - 1] === '\n') {
-        text = text.substring(0, text.length - 1);
-    }
-    console.log((performance.now() / 1000).toFixed(3) + ": " + text);
-}
-
+/* This part is node.js specific and needs to be moved to the node.js client
 if (typeof(process) !== 'undefined' && typeof(module) !== 'undefined') {
     console.log("This appears to be Node.js");
 
@@ -98,7 +91,9 @@ if (typeof(process) !== 'undefined' && typeof(module) !== 'undefined') {
     };
 
     GLOBAL.WebSocket = CustomWebSocket;
-} else if (typeof(navigator) !== 'undefined' && navigator.mozGetUserMedia) {
+} else 
+*/
+if (typeof(navigator) !== 'undefined' && navigator.mozGetUserMedia) {
     console.log("This appears to be Firefox");
 
     webrtcDetectedBrowser = "firefox";

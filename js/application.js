@@ -1,5 +1,9 @@
 /** @fileOverview API for application developers. */
 
+var ConnectionManager = require('./connectionmanager.js');
+var Router = require('./router.js');
+var sha1 = require('./sha1.js');
+
 /**
  * @constructor
  * @class This is the top-level API for BOPlish applications. It should be the
@@ -29,12 +33,11 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
 
     this.id = sha1.hash(Math.random().toString());
     this._connectionManager = new ConnectionManager();
-    bootstrapHost = bootstrapHost || window.location.host;
 
-    if (bootstrapHost.substring(0, bootstrapHost.length - 1) !== '/') { // add trailing slash if missing
+    if (bootstrapHost.substring(bootstrapHost.length - 1, bootstrapHost.length) !== '/') { // add trailing slash if missing
         bootstrapHost += '/';
     }
-    if (bootstrapHost.substring(0, 6) !== 'wss://' || bootstrapHost.substring(0, 5) !== 'ws://') { // check syntax
+    if (bootstrapHost.substring(0, 6) !== 'wss://' && bootstrapHost.substring(0, 5) !== 'ws://') { // check syntax
         errorCallback('Syntax error in bootstrapHost parameter');
         return;
     }

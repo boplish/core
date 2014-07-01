@@ -1,11 +1,13 @@
 /** @fileOverview Mid-level connection broking and signaling functionality. */
 
+var Peer = require('./peer.js');
+
 /**
  * @constructor
  * @class Handles the connection establishment to other nodes as
  * well as joining a network (bootstrapping).
  */
-ConnectionManager = function(fallbackSignaling) {
+var ConnectionManager = function(fallbackSignaling) {
     if (!(this instanceof ConnectionManager)) {
         return new ConnectionManager(fallbackSignaling);
     }
@@ -99,8 +101,8 @@ ConnectionManager.prototype = {
             onsuccess: successCallback,
             onerror: errorCallback,
         };
-        pc.createOffer(this._onCreateOfferSuccess.bind(this, pc, to, this._pending[to]),
-            this._onCreateOfferError.bind(this, errorCallback));
+        pc.createOffer(this._onCreateOfferSuccess.bind(this, pc, to, this._pending[to], 
+            errorCallback), this._onCreateOfferError.bind(this, errorCallback));
     },
 
     _onCreateOfferSuccess: function(pc, to, pendingOffer, errorCallback, sessionDesc) {

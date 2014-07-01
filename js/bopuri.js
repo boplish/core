@@ -7,7 +7,7 @@
  *
  * @param str the URI string to parse
  */
-BopURI = function(str) {
+var BopURI = function(str) {
 
     if (!(this instanceof BopURI)) {
         return new BopURI(str);
