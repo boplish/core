@@ -101,7 +101,7 @@ ConnectionManager.prototype = {
             onsuccess: successCallback,
             onerror: errorCallback,
         };
-        pc.createOffer(this._onCreateOfferSuccess.bind(this, pc, to, this._pending[to], 
+        pc.createOffer(this._onCreateOfferSuccess.bind(this, pc, to, this._pending[to],
             errorCallback), this._onCreateOfferError.bind(this, errorCallback));
     },
 
