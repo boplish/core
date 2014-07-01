@@ -101,6 +101,15 @@ describe('Router', function() {
             // once for discovery, twice for actual routing of the msg
             sinon.assert.calledTwice(stub);
         });
+        it('should route messages to unknown peers via fallback channel', function() {
+            var ws = {
+                send: function() {}
+            };
+            var stub = sinon.stub(ws, 'send');
+            var router = new Router('1', ws);
+            router.route('2', 'test', {});
+            sinon.assert.calledOnce(stub);
+        });
     });
     describe('#deliver()', function() {
         it('should be called when an incoming message is directed to this peer', function(done) {
