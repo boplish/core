@@ -8,25 +8,33 @@ var bigInt = (function() {
 
     var normalize = function(first, second) {
         var a = first.value,
-            b = second.value;
+            b = second.value,
+            i;
         var length = a.length > b.length ? a.length : b.length;
-        for (var i = 0; i < length; i++) {
+        for (i = 0; i < length; i++) {
             a[i] = a[i] || 0;
             b[i] = b[i] || 0;
         }
-        for (var i = length - 1; i >= 0; i--) {
+        for (i = length - 1; i >= 0; i--) {
             if (a[i] === 0 && b[i] === 0) {
                 a.pop();
                 b.pop();
-            } else break;
+            } else {
+                break;
+            }
         }
-        if (!a.length) a = [0], b = [0];
+        if (!a.length) {
+            a = [0];
+            b = [0];
+        }
         first.value = a;
         second.value = b;
     };
 
     var parse = function(text, first) {
-        if (typeof text === "object") return text;
+        if (typeof text === "object") {
+            return text;
+        }
         text += "";
         var s = sign.positive,
             value = [];
@@ -34,36 +42,50 @@ var bigInt = (function() {
             s = sign.negative;
             text = text.slice(1);
         }
-        var text = text.split("e");
-        if (text.length > 2) throw new Error("Invalid integer");
+        text = text.split("e");
+        if (text.length > 2) {
+            throw new Error("Invalid integer");
+        }
         if (text[1]) {
             var exp = text[1];
-            if (exp[0] === "+") exp = exp.slice(1);
+            if (exp[0] === "+") {
+                exp = exp.slice(1);
+            }
             exp = parse(exp);
-            if (exp.lesser(0)) throw new Error("Cannot include negative exponent part for integers");
+            if (exp.lesser(0)) {
+                throw new Error("Cannot include negative exponent part for integers");
+            }
             while (exp.notEquals(0)) {
                 text[0] += "0";
                 exp = exp.prev();
             }
         }
         text = text[0];
-        if (text === "-0") text = "0";
+        if (text === "-0") {
+            text = "0";
+        }
         var isValid = /^([0-9][0-9]*)$/.test(text);
-        if (!isValid) throw new Error("Invalid integer");
+        if (!isValid) {
+            throw new Error("Invalid integer");
+        }
         while (text.length) {
             var divider = text.length > logBase ? text.length - logBase : 0;
             value.push(+text.slice(divider));
             text = text.slice(0, divider);
         }
         var val = bigInt(value, s);
-        if (first) normalize(first, val);
+        if (first) {
+            normalize(first, val);
+        }
         return val;
     };
 
     var goesInto = function(a, b) {
-        var a = bigInt(a, sign.positive),
-            b = bigInt(b, sign.positive);
-        if (a.equals(0)) throw new Error("Cannot divide by 0");
+        a = bigInt(a, sign.positive);
+        b = bigInt(b, sign.positive);
+        if (a.equals(0)) {
+            throw new Error("Cannot divide by 0");
+        }
         var n = 0;
         do {
             var inc = 1;
@@ -105,8 +127,12 @@ var bigInt = (function() {
             add: function(n, m) {
                 var s, first = self,
                     second;
-                if (m)(first = parse(n)) && (second = parse(m));
-                else second = parse(n, first);
+                if (m) {
+                    first = parse(n);
+                    second = parse(m);
+                } else {
+                    second = parse(n, first);
+                }
                 s = first.sign;
                 if (first.sign !== second.sign) {
                     first = bigInt(first.value, sign.positive);
@@ -134,11 +160,21 @@ var bigInt = (function() {
             subtract: function(n, m) {
                 var first = self,
                     second;
-                if (m)(first = parse(n)) && (second = parse(m));
-                else second = parse(n, first);
-                if (first.sign !== second.sign) return o.add(first, o.negate(second));
-                if (first.sign === sign.negative) return o.subtract(o.negate(second), o.negate(first));
-                if (o.compare(first, second) === -1) return o.negate(o.subtract(second, first));
+                if (m) {
+                    first = parse(n);
+                    second = parse(m);
+                } else {
+                    second = parse(n, first);
+                }
+                if (first.sign !== second.sign) {
+                    return o.add(first, o.negate(second));
+                }
+                if (first.sign === sign.negative) {
+                    return o.subtract(o.negate(second), o.negate(first));
+                }
+                if (o.compare(first, second) === -1) {
+                    return o.negate(o.subtract(second, first));
+                }
                 var a = first.value,
                     b = second.value;
                 var result = [],
@@ -156,9 +192,13 @@ var bigInt = (function() {
             },
             multiply: function(n, m) {
                 var s, first = self,
-                    second;
-                if (m)(first = parse(n)) && (second = parse(m));
-                else second = parse(n, first);
+                    second, k;
+                if (m) {
+                    first = parse(n);
+                    second = parse(m);
+                } else {
+                    second = parse(n, first);
+                }
                 s = first.sign !== second.sign;
                 var a = first.value,
                     b = second.value;
@@ -171,10 +211,10 @@ var bigInt = (function() {
                     }
                 }
                 var carry = 0;
-                for (var i = 0; i < a.length; i++) {
+                for (i = 0; i < a.length; i++) {
                     var x = a[i];
-                    for (var j = 0; j < b.length || carry > 0; j++) {
-                        var y = b[j];
+                    for (k = 0; k < b.length || carry > 0; k++) {
+                        var y = b[k];
                         var product = y ? (x * y) + carry : carry;
                         carry = product > base ? Math.floor(product / base) : 0;
                         product -= carry * base;
@@ -182,16 +222,18 @@ var bigInt = (function() {
                     }
                 }
                 var max = -1;
-                for (var i = 0; i < resultSum.length; i++) {
+                for (i = 0; i < resultSum.length; i++) {
                     var len = resultSum[i].length;
-                    if (len > max) max = len;
+                    if (len > max) {
+                        max = len;
+                    }
                 }
-                var result = [],
-                    carry = 0;
-                for (var i = 0; i < max || carry > 0; i++) {
+                var result = [];
+                carry = 0;
+                for (i = 0; i < max || carry > 0; i++) {
                     var sum = carry;
-                    for (var j = 0; j < resultSum.length; j++) {
-                        sum += resultSum[j][i] || 0;
+                    for (k = 0; k < resultSum.length; k++) {
+                        sum += resultSum[k][i] || 0;
                     }
                     carry = sum > base ? Math.floor(sum / base) : 0;
                     sum -= carry * base;
@@ -205,20 +247,28 @@ var bigInt = (function() {
             divmod: function(n, m) {
                 var s, first = self,
                     second;
-                if (m)(first = parse(n)) && (second = parse(m));
-                else second = parse(n, first);
+                if (m) {
+                    first = parse(n);
+                    second = parse(m);
+                } else {
+                    second = parse(n, first);
+                }
                 s = first.sign !== second.sign;
-                if (bigInt(first.value, first.sign).equals(0)) return {
-                    quotient: bigInt([0], sign.positive),
-                    remainder: bigInt([0], sign.positive)
-                };
-                if (second.equals(0)) throw new Error("Cannot divide by zero");
+                if (bigInt(first.value, first.sign).equals(0)) {
+                    return {
+                        quotient: bigInt([0], sign.positive),
+                        remainder: bigInt([0], sign.positive)
+                    };
+                }
+                if (second.equals(0)) {
+                    throw new Error("Cannot divide by zero");
+                }
                 var a = first.value,
                     b = second.value;
                 var result = [],
                     remainder = [];
                 for (var i = a.length - 1; i >= 0; i--) {
-                    var n = [a[i]].concat(remainder);
+                    n = [a[i]].concat(remainder);
                     var quotient = goesInto(b, n);
                     result.push(quotient.result);
                     remainder = quotient.remainder;
@@ -241,12 +291,20 @@ var bigInt = (function() {
             pow: function(n, m) {
                 var first = self,
                     second;
-                if (m)(first = parse(n)) && (second = parse(m));
-                else second = parse(n, first);
+                if (m) {
+                    first = parse(n);
+                    second = parse(m);
+                } else {
+                    second = parse(n, first);
+                }
                 var a = first,
                     b = second;
-                if (b.lesser(0)) return ZERO;
-                if (b.equals(0)) return ONE;
+                if (b.lesser(0)) {
+                    return ZERO;
+                }
+                if (b.equals(0)) {
+                    return ONE;
+                }
                 var result = bigInt(a.value, a.sign);
 
                 if (b.mod(2).equals(0)) {
@@ -267,25 +325,41 @@ var bigInt = (function() {
             compare: function(n, m) {
                 var first = self,
                     second;
-                if (m)(first = parse(n)) && (second = parse(m, first));
-                else second = parse(n, first);
+                if (m) {
+                    first = parse(n);
+                    second = parse(m, first);
+                } else {
+                    second = parse(n, first);
+                }
                 normalize(first, second);
-                if (first.value.length === 1 && second.value.length === 1 && first.value[0] === 0 && second.value[0] === 0) return 0;
-                if (second.sign !== first.sign) return first.sign === sign.positive ? 1 : -1;
+                if (first.value.length === 1 && second.value.length === 1 && first.value[0] === 0 && second.value[0] === 0) {
+                    return 0;
+                }
+                if (second.sign !== first.sign) {
+                    return first.sign === sign.positive ? 1 : -1;
+                }
                 var multiplier = first.sign === sign.positive ? 1 : -1;
                 var a = first.value,
                     b = second.value;
                 for (var i = a.length - 1; i >= 0; i--) {
-                    if (a[i] > b[i]) return 1 * multiplier;
-                    if (b[i] > a[i]) return -1 * multiplier;
+                    if (a[i] > b[i]) {
+                        return 1 * multiplier;
+                    }
+                    if (b[i] > a[i]) {
+                        return -1 * multiplier;
+                    }
                 }
                 return 0;
             },
             compareAbs: function(n, m) {
                 var first = self,
                     second;
-                if (m)(first = parse(n)) && (second = parse(m, first));
-                else second = parse(n, first);
+                if (m) {
+                    first = parse(n);
+                    second = parse(m, first);
+                } else {
+                    second = parse(n, first);
+                }
                 first.sign = second.sign = sign.positive;
                 return o.compare(first, second);
             },
@@ -328,13 +402,18 @@ var bigInt = (function() {
                 var str = "",
                     len = first.value.length;
                 while (len--) {
-                    if (first.value[len].toString().length === 8) str += first.value[len];
-                    else str += (base.toString() + first.value[len]).slice(-logBase);
+                    if (first.value[len].toString().length === 8) {
+                        str += first.value[len];
+                    } else {
+                        str += (base.toString() + first.value[len]).slice(-logBase);
+                    }
                 }
                 while (str[0] === "0") {
                     str = str.slice(1);
                 }
-                if (!str.length) str = "0";
+                if (!str.length) {
+                    str = "0";
+                }
                 var s = first.sign === sign.positive ? "" : "-";
                 return s + str;
             },
@@ -353,7 +432,9 @@ var bigInt = (function() {
     var MINUS_ONE = bigInt([1], sign.negative);
 
     var fnReturn = function(a) {
-        if (typeof a === "undefined") return ZERO;
+        if (typeof a === "undefined") {
+            return ZERO;
+        }
         return parse(a);
     };
     fnReturn.zero = ZERO;
