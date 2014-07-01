@@ -86,13 +86,13 @@ Router.prototype = {
      * @param type the message type
      * @param payload the message payload
      */
-    route: function(to, type, payload, channel) {
+    route: function(to, type, payload) {
         this.forward({
             to: to,
             from: this._id,
             type: type,
             payload: payload
-        }, channel);
+        });
     },
 
     /**
@@ -102,7 +102,7 @@ Router.prototype = {
      *
      * @param msg {String} The message to route.
      */
-    forward: function(msg, channel) {
+    forward: function(msg) {
         if (typeof(this._monitorCallback) === 'function') {
             this._monitorCallback(msg);
         }
@@ -113,13 +113,10 @@ Router.prototype = {
             this.deliver(msg);
             return;
         }
-        if (channel) {
-            channel.send(JSON.stringify(msg));
-            return;
-        }
         var receiver = this._peerTable[msg.to];
         if (!(receiver instanceof Peer)) {
-            throw Error('Receiver not a Peer', receiver);
+            this._fallbackSignaling.send(JSON.stringify(msg));
+            return;
         }
         try {
             receiver.dataChannel.send(JSON.stringify(msg));

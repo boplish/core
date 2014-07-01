@@ -7,11 +7,10 @@ var Peer = require('./peer.js');
  * @class Handles the connection establishment to other nodes as
  * well as joining a network (bootstrapping).
  */
-var ConnectionManager = function(fallbackSignaling) {
+var ConnectionManager = function() {
     if (!(this instanceof ConnectionManager)) {
-        return new ConnectionManager(fallbackSignaling);
+        return new ConnectionManager();
     }
-    this._fallbackSignaling = fallbackSignaling;
     this._bootstrap = null;
     this._pending = {};
     this._connections = {};
@@ -114,20 +113,12 @@ ConnectionManager.prototype = {
                 // spec specifies that a null candidate means that the ice gathering is complete
                 pc.onicecandidate = function() {};
                 pc.createOffer(function(offer) {
-                    this._route(to, 'signaling-protocol', offer);
+                    this._router.route(to, 'signaling-protocol', offer);
                 }.bind(this), this._onCreateOfferError.bind(this, errorCallback));
             }
         }.bind(this);
         pendingOffer.offerId = this.utils.findSessionId(sessionDesc.sdp);
         pc.setLocalDescription(sessionDesc);
-    },
-
-    _route: function(to, type, payload) {
-        if (this._state === 'bootstrapping') {
-            this._router.route(to, type, payload, this._fallbackSignaling);
-        } else {
-            this._router.route(to, type, payload);
-        }
     },
 
     _onCreateOfferError: function(errorCallback, error) {
@@ -187,7 +178,7 @@ ConnectionManager.prototype = {
         // if we're already connected or are already processing an offer from
         // this peer, deny this offer
         if (this._connections[from] !== undefined || this._pending[from] !== undefined) {
-            this._route(from, 'signaling-protocol', {
+            this._router.route(from, 'signaling-protocol', {
                 type: 'denied'
             });
         }
@@ -269,7 +260,7 @@ ConnectionManager.prototype = {
             if (pc.iceGatheringState === 'complete' || iceEvent.candidate === null) {
                 // spec specifies that a null candidate means that the ice gathering is complete
                 pc.onicecandidate = function() {};
-                this._route(to, 'signaling-protocol', pc.localDescription);
+                this._router.route(to, 'signaling-protocol', pc.localDescription);
             }
         }.bind(this);
         pc.setLocalDescription(new RTCSessionDescription(sessionDesc));
