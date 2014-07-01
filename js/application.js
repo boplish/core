@@ -2,7 +2,7 @@
 
 var ConnectionManager = require('./connectionmanager.js');
 var Router = require('./router.js');
-var sha1 = require('./sha1.js');
+var sha1 = require('./third_party/sha1.js');
 
 /**
  * @constructor
@@ -31,8 +31,9 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
         return;
     }
 
-    this.id = sha1.hash(Math.random().toString());
-    this._connectionManager = new ConnectionManager();
+    var hash = new sha1();
+    hash.update(Math.random().toString());
+    this.id = sha1.hexString(hash.digest());
 
     if (bootstrapHost.substring(bootstrapHost.length - 1, bootstrapHost.length) !== '/') { // add trailing slash if missing
         bootstrapHost += '/';
@@ -51,6 +52,7 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
         this._connectionManager.bootstrap(this._router, successCallback, errorCallback);
     }.bind(this);
 
+    this._connectionManager = new ConnectionManager(channel);
     this._router = new Router(this.id, channel, this._connectionManager);
 };
 
