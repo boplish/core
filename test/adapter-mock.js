@@ -1,6 +1,6 @@
 /** @fileOverview Adapter code for mocking a WebRTC capable browser. */
 
-RTCPeerConnection = function(configuration) {
+function RTCPeerConnection(configuration) {
   this.dataChannels = [];
 };
 
@@ -90,7 +90,7 @@ RTCPeerConnection.prototype = {
   }
 };
 
-DataChannel = function(label){
+function DataChannel(label){
   this.label = label;
 };
 
@@ -114,7 +114,7 @@ DataChannel.prototype = {
   }
 };
 
-MockSignalingChannel = function(denied) {
+function MockSignalingChannel(denied) {
     this.denied = denied;
 };
 MockSignalingChannel.prototype.send = function(data) {
@@ -131,7 +131,7 @@ MockSignalingChannel.prototype.send = function(data) {
     }
 };
 
-MockRouter = function(signalingChannel, connectionManager) {
+function MockRouter(signalingChannel, connectionManager) {
     this.id = Math.floor(Math.random()*100);
     this.signalingChannel = signalingChannel;
     this.signalingChannel.onmessage = this.onmessage.bind(this);
