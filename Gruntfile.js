@@ -68,7 +68,9 @@ module.exports = function(grunt) {
                 },
                 options: {
                     exclude: ['js/bopclient.js'],
-                    browserifyOptions: {'noParse': 'js/adapter.js'}
+                    browserifyOptions: {
+                        'noParse': 'js/adapter.js'
+                    }
                 }
             },
             dist: {
@@ -78,7 +80,9 @@ module.exports = function(grunt) {
                 options: {
                     transform: ['uglifyify'],
                     exclude: ['js/bopclient.js'],
-                    browserifyOptions: {'noParse': 'js/adapter.js'}
+                    browserifyOptions: {
+                        'noParse': 'js/adapter.js'
+                    }
                 }
             }
         },

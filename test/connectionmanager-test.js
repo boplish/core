@@ -1,5 +1,4 @@
 var assert = require("should");
-require('./adapter-mock.js');
 require('../js/third_party/sha1.js');
 var sinon = require('sinon');
 var ConnectionManager = require('../js/connectionmanager.js');
@@ -10,35 +9,36 @@ var RouterAPI = {
 };
 
 describe('ConnectionManager', function() {
+    var cm;
+
+    beforeEach(function(){
+        cm = new ConnectionManager();
+    }),
+
     describe('#constructor()', function() {
         it('should return an instance', function() {
-            var pm = new ConnectionManager();
-            pm.should.be.an.instanceof(ConnectionManager);
-            pm = ConnectionManager();
-            pm.should.be.an.instanceof(ConnectionManager);
+            cm.should.be.an.instanceof(ConnectionManager);
+            cm = ConnectionManager();
+            cm.should.be.an.instanceof(ConnectionManager);
         });
         it('should set the correct state', function() {
-            var cm = new ConnectionManager();
             cm.should.have.property('_state', 'uninitialized');
         });
     });
     describe('#bootstrap()', function() {
         it('should register the correct callbacks', function() {
-            var cm = new ConnectionManager();
-
             var mockRouter = sinon.mock(RouterAPI);
             mockRouter.expects("registerDeliveryCallback").withArgs('signaling-protocol');
             cm.bootstrap(RouterAPI);
             mockRouter.restore();
         });
         it('should route the initial offer', function() {
-            var cm = new ConnectionManager();
             var mockRouter = sinon.mock(RouterAPI);
             mockRouter.expects('route').once();
             cm.bootstrap(RouterAPI);
+            mockRouter.restore();
         });
         it('should create the correct offer packet', function(done) {
-            var cm = new ConnectionManager();
             var router = {
                 registerDeliveryCallback: function() {},
                 route: function(to, type, msg) {
@@ -52,7 +52,6 @@ describe('ConnectionManager', function() {
             cm.bootstrap(router);
         });
         it('should set the correct state', function(done) {
-            var cm = new ConnectionManager();
             var router = {
                 registerDeliveryCallback: function() {},
                 route: function() {
@@ -63,7 +62,6 @@ describe('ConnectionManager', function() {
             cm.bootstrap(router);
         });
         it('should not allow being called twice', function(done) {
-            var cm = new ConnectionManager();
             var router = {
                 registerDeliveryCallback: function() {},
                 route: function() {},

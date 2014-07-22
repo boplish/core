@@ -25,7 +25,7 @@ if (typeof(process) !== 'undefined' && typeof(module) !== 'undefined') {
     var webrtc = require('wrtc');
     var WebSocketClient = require('websocket').client;
 
-    var RTCPeerConnection = function() {
+    RTCPeerConnection = function() {
         webrtc.RTCPeerConnection.call(this);
         var that = this;
         (function checkIceState() {

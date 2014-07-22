@@ -14,6 +14,9 @@ var ConnectionManager = function() {
     this._bootstrap = null;
     this._pending = {};
     this._connections = {};
+    this._pcoptions = {
+        iceServers: [{"url":"stun:stun.l.google.com:19302"}]
+    };
     //possible states: 'uninitialized', 'bootstrapping', 'ready'
     this._state = 'uninitialized';
 
@@ -62,7 +65,7 @@ ConnectionManager.prototype = {
         }
         this._state = 'bootstrapping';
         this._router = router;
-        var pc = new RTCPeerConnection(null);
+        var pc = new RTCPeerConnection(this._pcoptions);
         var to = '*';
         this._bootstrap = {
             pc: pc,
@@ -260,7 +263,9 @@ ConnectionManager.prototype = {
             if (pc.iceGatheringState === 'complete' || iceEvent.candidate === null) {
                 // spec specifies that a null candidate means that the ice gathering is complete
                 pc.onicecandidate = function() {};
-                this._router.route(to, 'signaling-protocol', pc.localDescription);
+                pc.createAnswer(function(answer) {
+                    this._router.route(to, 'signaling-protocol', answer);
+                }.bind(this), this._onCreateAnswerError.bind(this));
             }
         }.bind(this);
         pc.setLocalDescription(new RTCSessionDescription(sessionDesc));
