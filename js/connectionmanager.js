@@ -15,7 +15,9 @@ var ConnectionManager = function() {
     this._pending = {};
     this._connections = {};
     this._pcoptions = {
-        iceServers: [{"url":"stun:stun.l.google.com:19302"}]
+        iceServers: [{
+            "url": "stun:stun.l.google.com:19302"
+        }]
     };
     //possible states: 'uninitialized', 'bootstrapping', 'ready'
     this._state = 'uninitialized';

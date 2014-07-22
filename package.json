@@ -20,8 +20,7 @@
     "winston": "~0.7.2",
     "grunt-jsdoc": "^0.5.4",
     "uglifyify": "^2.4.0",
-    "bowser": "^0.7.1",
-    "wrtc": "0.0.22"
+    "bowser": "^0.7.1"
   },
   "scripts": {
     "test": "grunt test:core"

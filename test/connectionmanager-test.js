@@ -1,5 +1,6 @@
 var assert = require("should");
 require('../js/third_party/sha1.js');
+require('./adapter-mock.js');
 var sinon = require('sinon');
 var ConnectionManager = require('../js/connectionmanager.js');
 

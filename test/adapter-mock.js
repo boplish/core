@@ -1,6 +1,6 @@
 /** @fileOverview Adapter code for mocking a WebRTC capable browser. */
 
-function RTCPeerConnection(configuration) {
+RTCPeerConnection = function(configuration){
   this.dataChannels = [];
 };
 
@@ -162,3 +162,49 @@ if(typeof(module.exports) !== 'undefined') {
       MockSignalingChannel: MockSignalingChannel,
     };
 }
+
+var WebSocketClient = require('websocket').client;
+var CustomWebSocket = function(url) {
+    if (!(this instanceof WebSocket)) {
+        return new CustomWebSocket(url);
+    }
+    var websocketClient = new WebSocketClient();
+    var that = this;
+    websocketClient.on('connect', function(connection) {
+        connection.on('message', function(msg) {
+            msg.data = msg.utf8Data;
+            that.onmessage(msg);
+        });
+        that.send = function(msg) {
+            connection.send(msg);
+        };
+    });
+    websocketClient.on('connect', function(msg) {
+        that.onopen(msg);
+    });
+    websocketClient.on('error', function(err) {
+        that.onerror(err);
+    });
+    websocketClient.on('connectFailed', function(err) {
+        that.onerror(err);
+    });
+    websocketClient.on('close', function(err) {
+        that.onclose(msg);
+    });
+    setTimeout(function() { // break event loop to set callbacks
+        websocketClient.connect(url);
+    }, 0);
+
+    return this;
+};
+
+CustomWebSocket.prototype = {
+    onopen: function() {},
+    onerror: function(err) {},
+    onmessage: function(msg) {},
+    onclose: function(msg) {},
+    send: function(msg) {},
+    close: function() {}
+};
+
+WebSocket = CustomWebSocket;
