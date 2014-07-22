@@ -1,11 +1,20 @@
 var assert = require("should");
 var BOPlishClient = require('../js/bopclient.js');
 var sinon = require('sinon');
-require('../js/adapter.js');
 
 describe('Application', function(){
+    var bc;
+
+    beforeEach(function(){
+        bc = new BOPlishClient('ws://foo.bar:1337/', function(){}, function(){});
+    }),
+
     describe('#constructor()', function(){
-        it('should return an instance');
+        it('should return an instance', function(){
+            bc.should.be.an.instanceof(BOPlishClient);
+            bc = BOPlishClient('ws://foo.bar:1337/', function(){}, function(){});
+            bc.should.be.an.instanceof(BOPlishClient);
+        });
         it('should check bootstrap host syntax');
         it('should abort on incompatible client');
         it('should create an BOPlishClient');

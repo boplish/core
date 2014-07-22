@@ -22,6 +22,9 @@ var sha1 = require('./third_party/sha1.js');
  */
 
 BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
+    if (!(this instanceof BOPlishClient)) {
+        return new BOPlishClient(bootstrapHost, successCallback, errorCallback);
+    }
     var browser = bowser.browser;
     if (browser.firefox && browser.version >= 26) {
         // we are on FF
