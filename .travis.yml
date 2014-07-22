@@ -1,5 +1,8 @@
 language: node_js
-before_install: npm install -g grunt-cli
+before_install:
+ - sudo apt-get update -qq
+ - sudo apt-get install -qq libudev-dev libdrm-dev libgconf2-dev libgcrypt11-dev libpci-dev libxtst-dev 
+ - sudo npm install -g grunt-cli
 install: npm install
 node_js:
   - "0.11"
