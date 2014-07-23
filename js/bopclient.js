@@ -24,7 +24,10 @@ var sha1 = require('./third_party/sha1.js');
 BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     if (!(this instanceof BOPlishClient)) {
         return new BOPlishClient(bootstrapHost, successCallback, errorCallback);
+    } else if (typeof(bootstrapHost) !== 'string' || typeof(successCallback) !== 'function' || typeof(errorCallback) !== 'function') {
+        throw new TypeError('Not enough arguments or wrong type');
     }
+
     var browser = bowser.browser;
     if (browser.firefox && browser.version >= 26) {
         // we are on FF
@@ -58,7 +61,7 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
         this._connectionManager.bootstrap(this._router, successCallback, errorCallback);
     }.bind(this);
 
-    this._connectionManager = new ConnectionManager(channel);
+    this._connectionManager = new ConnectionManager();
     this._router = new Router(this.id, channel, this._connectionManager);
 }
 
@@ -71,14 +74,21 @@ BOPlishClient.prototype = {
      * used by application protocols
      */
     registerProtocol: function(protocolIdentifier) {
+        var self = this;
         var protocol = {
             identifier: protocolIdentifier,
-            onmessage: function(msg) {},
+            _onmessage: function(bopuri, from, msg) {
+                protocol.onmessage(bopuri, from, msg);
+            },
+            onmessage: function(bopuri, from, msg) {},
+            setOnMessageHandler: function(fn) {
+                protocol.onmessage = fn;
+            },
             send: function(bopuri, msg) {
-                this._router.route(to, protocol, payload);
+                self._router.route(bopuri, protocol.identifier, msg);
             }
         };
-        this._router.registerDeliveryCallback(protocolIdentifier, protocol.onmessage);
+        this._router.registerDeliveryCallback(protocolIdentifier, protocol._onmessage);
         return protocol;
     },
     /**
