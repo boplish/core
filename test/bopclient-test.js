@@ -61,31 +61,35 @@ describe('Application', function(){
                 var proto = bc.registerProtocol(protoIdentifier);
 
                 proto.should.have.property('identifier', protoIdentifier);
-                proto.should.have.property('_onmessage').and.be.an.Function;
-                proto.should.have.property('setOnMessageHandler').and.be.an.Function;
+                proto.should.have.property('onmessage').and.be.an.Function;
                 proto.should.have.property('send').and.be.an.Function;
             });
             it('should fail on malformed BOPUri');
-            it('should fail on empty message');
-            it('should correctly send messages', function(){
+            it('should fail on empty message', function(){
+                var proto = bc.registerProtocol(protoIdentifier);
+                (function(){
+                    proto.send('test', null);
+                }).should.throw();
+            });
+            it('should correctly pass messages to the Router', function(){
                 var proto = bc.registerProtocol(protoIdentifier);
                 var stub_router_route = sinon.stub(bc._router, 'route');
                 
-                proto.send('test', testMsg)
+                proto.send('test', testMsg);
                 
                 sinon.assert.calledOnce(stub_router_route);
                 sinon.assert.calledWith(stub_router_route, 'test', protoIdentifier, testMsg);
             });
             it('should allow to receive messages', function(done){
                 stub_router_registerDeliveryCallback.restore();
-                var proto = bc.registerProtocol(protoIdentifier);                
+                var proto = bc.registerProtocol(protoIdentifier);
 
-                proto.setOnMessageHandler(function(bopuri, from, msg) {
+                proto.onmessage = function(bopuri, from, msg) {
                     bopuri.should.be.ok;
                     from.should.equal('123');
                     msg.should.equal(testMsg);
                     done();
-                });
+                };
                 bc._router._messageCallbacks[protoIdentifier]('bop://user@example.org', '123', testMsg);
             });
         });

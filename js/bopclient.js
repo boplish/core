@@ -77,18 +77,17 @@ BOPlishClient.prototype = {
         var self = this;
         var protocol = {
             identifier: protocolIdentifier,
-            _onmessage: function(bopuri, from, msg) {
-                protocol.onmessage(bopuri, from, msg);
-            },
             onmessage: function(bopuri, from, msg) {},
-            setOnMessageHandler: function(fn) {
-                protocol.onmessage = fn;
-            },
             send: function(bopuri, msg) {
+                if (!msg) {
+                    throw new Error("Trying to send empty message");
+                }
                 self._router.route(bopuri, protocol.identifier, msg);
             }
         };
-        this._router.registerDeliveryCallback(protocolIdentifier, protocol._onmessage);
+        this._router.registerDeliveryCallback(protocolIdentifier, function(bopuri, from, msg) {
+            protocol.onmessage(bopuri, from, msg);
+        });
         return protocol;
     },
     /**
