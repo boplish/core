@@ -1,3 +1,5 @@
+var shell = require('shelljs');
+
 module.exports = function(grunt) {
 
     // Load grunt tasks automatically
@@ -116,4 +118,7 @@ module.exports = function(grunt) {
     grunt.registerTask('test:chord', 'simplemocha:chord');
     grunt.registerTask('test:core', 'simplemocha:core');
     grunt.registerTask('default', ['verify', 'jsdoc', 'jshint', 'test', 'beautify', 'dist']);
+    grunt.registerTask('tags', function() {
+        shell.exec('cd js && jsctags *.js chord/*.js third_party/*.js');
+    });
 };
