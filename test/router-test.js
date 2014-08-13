@@ -4,28 +4,35 @@ var Peer = require('../js/peer.js');
 var sinon = require('sinon');
 var RTCPeerConnection = require('./adapter-mock.js').RTCPeerConnection;
 var DataChannel = require('./adapter-mock.js').DataChannel;
+var ConnectionManager = require('../js/connectionmanager.js');
 
 describe('Router', function() {
+    var router;
+
+    beforeEach(function() {
+        router = new Router('1', {}, sinon.stub(new ConnectionManager()));
+    });
+    afterEach(function() {
+        // restore the environment as it was before
+        sinon.restore();
+    });
+
     describe('#constructor()', function() {
         it('should return an instance', function() {
-            var router = new Router('1', {}, null);
             router.should.be.an.instanceof(Router);
         });
         it('should set the ID correctly', function() {
-            var router = new Router('1', {}, null);
             router.should.have.property('_id', '1');
         });
     });
     describe('#addPeer()', function() {
         it('should add a peer to the routing table', function() {
-            var router = new Router('1', {});
             var peer = new Peer('2', sinon.stub(new RTCPeerConnection()), sinon.stub(new DataChannel()));
             router.addPeer(peer);
             router.should.have.property('_peerTable');
             Object.keys(router._peerTable).should.have.length(1);
         });
         it('should discover neighbors from 1st peer', function() {
-            var router = new Router('1', {});
             var dc = new DataChannel();
             var stub = sinon.stub(dc, 'send');
             var peer1 = new Peer('2', sinon.stub(new RTCPeerConnection()), dc);
@@ -38,7 +45,6 @@ describe('Router', function() {
     });
     describe('#getPeerIds()', function() {
         it('should return a list of all peer ids in the routing table', function() {
-            var router = new Router('1', {});
             var peer1 = new Peer('1', sinon.stub(new RTCPeerConnection()), sinon.stub(new DataChannel()));
             var peer2 = new Peer('abc', sinon.stub(new RTCPeerConnection()), sinon.stub(new DataChannel()));
             router.addPeer(peer1);
@@ -53,25 +59,25 @@ describe('Router', function() {
     });
     describe('#removePeer()', function() {
         it('should remove a peer from the routing table', function() {
-            var router = new Router('1', {});
             var peer = new Peer('2', sinon.stub(new RTCPeerConnection()), sinon.stub(new DataChannel()));
+            router.addPeer(peer);
+
             router.removePeer(peer);
+
             router.should.have.property('_peerTable');
             Object.keys(router._peerTable).should.have.length(0);
-            router.addPeer(peer);
         });
     });
     describe('#registerDeliveryCallback()', function() {
         it('should register a callback function', function() {
-            var router = new Router('1', {});
             router.registerDeliveryCallback('test', function() {});
+
             router._messageCallbacks.should.have.property('test');
             Object.keys(router._messageCallbacks).should.have.length(2);
         });
     });
     describe('#route()', function() {
         it('should deliver messages directed to this id locally by calling `deliver()`', function(done) {
-            var router = new Router('1', {});
             var spy = sinon.spy(router, 'deliver');
             var testMsg = {
                 data: 'test'
@@ -89,7 +95,6 @@ describe('Router', function() {
             router.route(router._id, 'test', testMsg);
         });
         it('should route messages directed to a remote peer', function() {
-            var router = new Router('1', {});
             var dc = new DataChannel();
             var stub = sinon.stub(dc, 'send');
             var peer = new Peer('2', sinon.stub(new RTCPeerConnection()), dc);
@@ -113,7 +118,6 @@ describe('Router', function() {
     });
     describe('#deliver()', function() {
         it('should be called when an incoming message is directed to this peer', function(done) {
-            var router = new Router('1', {});
             var spy = sinon.spy(router, 'deliver');
             var testMsg = {
                 data: 'test'
@@ -131,7 +135,6 @@ describe('Router', function() {
             router.route(router._id, 'test', testMsg);
         });
         it('should be able to determine the type of a incoming message and forward to the corresponding callback', function(done) {
-            var router = new Router('1', {});
             var spy = sinon.spy(router, 'deliver');
             var testMsg1 = {
                 data: 'an offer message'
@@ -164,7 +167,6 @@ describe('Router', function() {
     });
     describe('#neighbor discovery', function() {
         it('should call the answer callback when an discovery answer is received', function() {
-            var router = new Router('1', {});
             var stub = sinon.stub(router._messageCallbacks, 'discovery');
             var fakeDiscoveryAnswerMessage = {
                 type: 'answer',
@@ -178,7 +180,6 @@ describe('Router', function() {
             sinon.assert.calledWith(stub, fakeDiscoveryAnswerMessage);
         });
         it('should call the request callback when an request message is received', function() {
-            var router = new Router('1', {});
             var stub = sinon.stub(router._messageCallbacks, 'discovery');
 
             router.route(router._id, 'discovery', {
