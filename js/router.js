@@ -125,6 +125,10 @@ Router.prototype = {
         }
     },
 
+    get: function(peerId) {
+        // @todo: implement me
+    },
+
     /**
      * Deliver a message to this peer. Is called when the `to` field of
      * the message contains the id of this peer. Decides where to deliver

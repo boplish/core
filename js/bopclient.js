@@ -77,18 +77,32 @@ BOPlishClient.prototype = {
         var self = this;
         var protocol = {
             identifier: protocolIdentifier,
-            onmessage: function(bopuri, from, msg) {},
+            onmessage: function(from, msg) {},
             send: function(bopuri, msg) {
                 if (!msg) {
                     throw new Error("Trying to send empty message");
                 }
-                self._router.route(bopuri, protocol.identifier, msg);
+                self._send(bopuri, protocolIdentifier, msg);
             }
         };
-        this._router.registerDeliveryCallback(protocolIdentifier, function(bopuri, from, msg) {
-            protocol.onmessage(bopuri, from, msg);
+        this._router.registerDeliveryCallback(protocolIdentifier, function(msg) {
+            protocol.onmessage(msg.from, msg.payload);
         });
         return protocol;
+    },
+    _send: function(bopuri, protocolIdentifier, msg) {
+        var msg = {
+            payload: msg,
+            to: bopuri.uid,
+            from: this.id,
+        }
+        var hash = new sha1();
+        hash.update(bopuri.uid);
+        var bopidHash = sha1.hexString(hash.digest());
+        
+        this._router.get(bopidHash, function(peerId) {
+            this._router.route(peerId, protcolIdentifier, msg);
+        });
     },
     /**
      * Installs a special callback that receives all messages despite their
