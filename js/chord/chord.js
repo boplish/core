@@ -22,7 +22,7 @@ var Chord = function(id, connectionManager) {
     Helper.defineProperties(this);
 
     // TODO(max): externalize this so Node can reuse it upon (de-)serializing
-    if (typeof id === undefined) {
+    if (typeof id === "undefined") {
         var hash = new Sha1();
         hash.update(Math.random().toString());
         id = Sha1.bigInteger(hash.digest());
