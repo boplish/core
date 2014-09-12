@@ -63,7 +63,7 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
 
     this._connectionManager = new ConnectionManager();
     this._router = new Router(this.id, channel, this._connectionManager);
-}
+};
 
 BOPlishClient.prototype = {
     /**
@@ -91,15 +91,15 @@ BOPlishClient.prototype = {
         return protocol;
     },
     _send: function(bopuri, protocolIdentifier, msg) {
-        var msg = {
+        msg = {
             payload: msg,
             to: bopuri.uid,
             from: this.id,
-        }
+        };
         var hash = new sha1();
         hash.update(bopuri.uid);
         var bopidHash = sha1.hexString(hash.digest());
-        
+
         this._router.get(bopidHash, function(peerId) {
             this._router.route(peerId, protcolIdentifier, msg);
         });
@@ -120,7 +120,7 @@ BOPlishClient.prototype = {
     getConnectedPeers: function() {
         return this._router.getPeerIds();
     }
-}
+};
 
 if (typeof(module) !== 'undefined') {
     module.exports = BOPlishClient;
