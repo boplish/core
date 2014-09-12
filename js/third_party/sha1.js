@@ -271,7 +271,7 @@ sha1.number = function(digest) {
     return value;
 };
 
-sha1.prototype.bigInteger = function(digest) {
+sha1.bigInteger = function(digest) {
     var value = BigInteger(),
         i;
     for (i = digest.length - 1; i >= 0; i--) {

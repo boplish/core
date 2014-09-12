@@ -1,7 +1,9 @@
 {
   "name": "BOPlish",
   "version": "0.0.1",
-  "dependencies": {},
+  "dependencies": {
+    "async": "^0.9.0"
+  },
   "devDependencies": {
     "browserify": "*",
     "grunt-browserify": "*",
