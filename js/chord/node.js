@@ -1,7 +1,7 @@
 var BigInteger = require("../third_party/BigInteger");
 var Range = require("./range");
 
-ChordNode = function(peer, chord, localNode) {
+var ChordNode = function(peer, chord, localNode) {
     if (!(this instanceof ChordNode)) {
         return new ChordNode(peer, chord);
     }
@@ -18,12 +18,9 @@ ChordNode = function(peer, chord, localNode) {
     this.debug = true;
     this._localNode = !! localNode;
     this._store = {};
-    ChordNode.instances++;
 
     return this;
 };
-
-ChordNode.instances = 0;
 
 ChordNode.prototype = {
 
@@ -154,6 +151,18 @@ ChordNode.prototype = {
         });
     },
 
+    route: function(to, type, payload) {
+        var self = this;
+        this._send_request({
+            type: this.message_types.ROUTE,
+            to: to,
+            proto_type: type,
+            payload: payload
+        }, function(err, msg) {
+            self.log("route result", msg);
+        });
+    },
+
     store: function(key, value) {
         this._store[key] = value;
     },
@@ -247,6 +256,16 @@ ChordNode.prototype = {
         });
     },
 
+    _route: function(msg) {
+        var self = this;
+        this._chord.route(msg.to, msg.proto_type, msg.payload, function(err) {
+            self._send({
+                type: self.message_types.ACK,
+                seqnr: msg.seqnr
+            });
+        });
+    },
+
     _send_request: function(msg, cb) {
         msg.seqnr = this._seqnr++; // TODO(max): handle overflows
         this._pending[msg.seqnr] = cb;
@@ -254,8 +273,11 @@ ChordNode.prototype = {
     },
 
     _send: function(msg) {
-        msg.to = this._peer.id.toString();
-        this._peer.dataChannel.send(msg);
+        if (!this._localNode) {
+            msg.to = this._peer.id.toString();
+        }
+        msg.from = this._chord.id().toString();
+        this._peer.dataChannel.send(JSON.stringify(msg));
     },
 
     _onmessage: function(rawMsg, sender) {
@@ -281,6 +303,9 @@ ChordNode.prototype = {
             return; // ignore message without sequence number
         }
         switch (msg.type) {
+            case this.message_types.ROUTE:
+                this._route(msg);
+                break;
             case this.message_types.GET:
                 key = new BigInteger(msg.key);
                 this._get(key, msg.seqnr);

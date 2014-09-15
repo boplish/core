@@ -1,8 +1,10 @@
 /** @fileOverview API for application developers. */
 
-var ConnectionManager = require('./connectionmanager.js');
-var Router = require('./router.js');
-var sha1 = require('./third_party/sha1.js');
+var ConnectionManager = require('./connectionmanager');
+var Router = require('./router');
+var sha1 = require('./third_party/sha1');
+var Chord = require('./chord/chord');
+var BigInteger = require('./third_party/BigInteger');
 
 /**
  * @constructor
@@ -31,9 +33,8 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
         return;
     }
 
-    var hash = new sha1();
-    hash.update(Math.random().toString());
-    this.id = sha1.hexString(hash.digest());
+    var id = Chord.randomId();
+    this.id = id.toString();
 
     if (bootstrapHost.substring(bootstrapHost.length - 1, bootstrapHost.length) !== '/') { // add trailing slash if missing
         bootstrapHost += '/';
@@ -53,7 +54,8 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     }.bind(this);
 
     this._connectionManager = new ConnectionManager(channel);
-    this._router = new Router(this.id, channel, this._connectionManager);
+    //this._router = new Router(this.id, channel, this._connectionManager);
+    this._router = new Chord(id, channel, this._connectionManager);
 };
 
 BOPlishClient.prototype = {

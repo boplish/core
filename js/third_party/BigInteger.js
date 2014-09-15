@@ -44,7 +44,7 @@ var bigInt = (function() {
         }
         text = text.split("e");
         if (text.length > 2) {
-            throw new Error("Invalid integer");
+            throw new Error("Invalid integer: " + text);
         }
         if (text[1]) {
             var exp = text[1];
@@ -66,7 +66,7 @@ var bigInt = (function() {
         }
         var isValid = /^([0-9][0-9]*)$/.test(text);
         if (!isValid) {
-            throw new Error("Invalid integer");
+            throw new Error("Invalid integer: " + text);
         }
         while (text.length) {
             var divider = text.length > logBase ? text.length - logBase : 0;

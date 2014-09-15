@@ -14,27 +14,25 @@ var Range = require("./range");
  * @param connectionManager {ConnectionManager} The connection manager instance
  * to be used for requesting data channel connections.
  */
-var Chord = function(id, connectionManager) {
+var Chord = function(id, fallbackSignaling, connectionManager) {
     if (!(this instanceof Chord)) {
-        return new Chord(id, connectionManager);
+        return new Chord(id, fallbackSignaling, connectionManager);
     }
 
     Helper.defineProperties(this);
 
     // TODO(max): externalize this so Node can reuse it upon (de-)serializing
-    if (typeof id === "undefined") {
-        var hash = new Sha1();
-        hash.update(Math.random().toString());
-        id = Sha1.bigInteger(hash.digest());
+    if (!id) {
+        id = Chord.randomId();
     }
 
-    this._localNode = new ChordNode(new Peer(id, null, null), this, true);
+    this._localNode = new ChordNode(new Peer(id, null, fallbackSignaling), this, true);
     this._localNode._successor = id;
     this._localNode._predecessor = id;
     this._remotes = {};
     this._connectionManager = connectionManager;
     this._fingerTable = {};
-    this._m = 160;
+    this._m = 8;
     this._joined = false; // are we joined to a Chord ring, yet?
 
     var memoizer = Helper.memoize(Helper.fingerTableIntervalStart.bind(this));
@@ -66,7 +64,7 @@ var Helper = {
     },
 
     fingerTableIntervalStart: function(i) {
-        return this._id.add(BigInteger(2).pow(i - 1)).mod(BigInteger(2).pow(this._m));
+        return this.id().add(BigInteger(2).pow(i - 1)).mod(BigInteger(2).pow(this._m));
     },
 
     defineProperties: function(object) {
@@ -77,7 +75,7 @@ var Helper = {
         });
         Object.defineProperty(object, "id", {
             get: function() {
-                return object._localNode.id;
+                return object._localNode.id.bind(object._localNode);
             },
             set: function(id) {}
         });
@@ -105,7 +103,7 @@ Chord.prototype._update_others = function() {
 Chord.prototype._closest_preceding_finger = function(id) {
     var i;
     for (i = this._m; i >= 1; i--) {
-        if (Range.inOpenInterval(this._fingerTable[i].node._id, this._id, id)) {
+        if (Range.inOpenInterval(this._fingerTable[i].node.id(), this.id(), id)) {
             return this._fingerTable[i].node;
         }
     }
@@ -225,6 +223,28 @@ Chord.prototype.get = function(key, callback) {
 
 Chord.prototype.remove = function(key) {
     // TODO: implement
+};
+
+Chord.prototype.route = function(to, type, payload, callback) {
+    if (to === "*") {
+        this._localNode.route(to, type, payload);
+    } else if (this.id().equals(to)) {
+        callback(null);
+    } else {
+        this._localNode.successor(function(err, successorNode) {
+            successorNode.route(to, type, payload);
+        });
+    }
+};
+
+Chord.prototype.registerDeliveryCallback = function(protocol, callback) {
+    // TODO
+};
+
+Chord.randomId = function() {
+    var hash = new Sha1();
+    hash.update(Math.random().toString());
+    return Sha1.bigInteger(hash.digest());
 };
 
 if (typeof(module) !== 'undefined') {

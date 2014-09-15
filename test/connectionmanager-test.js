@@ -1,6 +1,8 @@
+/* jshint expr: true */
+
 var assert = require("should");
 require('../js/third_party/sha1.js');
-require('./adapter-mock.js');
+var Mocks = require('./adapter-mock.js');
 var sinon = require('sinon');
 var ConnectionManager = require('../js/connectionmanager.js');
 
@@ -12,7 +14,7 @@ var RouterAPI = {
 describe('ConnectionManager', function() {
     var cm;
 
-    beforeEach(function(){
+    beforeEach(function() {
         cm = new ConnectionManager();
     }),
 
@@ -72,57 +74,52 @@ describe('ConnectionManager', function() {
                 done();
             });
         });
-    });
-});
-/*
-        it('should connect two peers on bootstrap', function(done) {
+        it('should connect two peers on bootstrap', function() {
             var sigch1 = {
                 send: function(data) {
                     data.should.have.property('from', router1.id);
-                    sigch2.onmessage({data: data});
+                    if (data.type === "signaling-protocol" && data.payload.type === "offer") {
+                        sigch1.onmessage({
+                            data: JSON.stringify({
+                                to: router1.id,
+                                from: router2.id,
+                                type: "signaling-protocol",
+                                payload: {
+                                    type: "denied"
+                                }
+                            })
+                        });
+                        return;
+                    }
+                    sigch2.onmessage({
+                        data: JSON.stringify(data)
+                    });
                 },
             };
             var sigch2 = {
                 send: function(data) {
                     data.should.have.property('from', router2.id);
-                    data.should.have.property('to', 1);
-                    sigch1.onmessage({data: data});
-                    assert.ok(pm1._connected);
-                    done();
+                    data.should.have.property('to', '*');
+                    sigch1.onmessage({
+                        data: JSON.stringify(data)
+                    });
                 },
             };
-            var pm1 = new ConnectionManager();
-            var router1 = new MockRouter(sigch1, pm1);
-            var pm2 = new ConnectionManager();
-            var router2 = new MockRouter(sigch2, pm2);
-            pm1.bootstrap(router1, function(){}, function(){});
-
+            var cm1 = new ConnectionManager();
+            var router1 = new Mocks.MockRouter(1, sigch1, cm1);
+            var cm2 = new ConnectionManager();
+            var router2 = new Mocks.MockRouter(2, sigch2, cm2);
+            cm1.bootstrap(router1, function() {}, function() {});
+            cm2.bootstrap(router2, function() {}, function() {});
+            var ev = {
+                channel: {}
+            };
+            cm1._bootstrap.pc.ondatachannel(ev);
+            ev.channel.onopen();
+            cm2._bootstrap.dc.onopen();
+            router1.should.have.property("_peer");
+            router1._peer.should.have.property("id").equal(router2.id);
+            router2._peer.should.have.property("id").equal(router1.id);
         });
-        it('should reset if the offer is denied', function(){
-            var pm = new ConnectionManager(new MockSignalingChannel(true), new MockRouter(1));
-            var spy = sinon.spy(pm, '_onOfferDenied');
-            pm.connect(function() {});
-            sinon.assert.calledOnce(spy);
-            pm.should.have.property('_pc');
-            pm._pc.should.be.an.instanceof(RTCPeerConnection);
-            pm.should.have.property('_dc', null);
-        });
-        it('should set the DataChannel', function() {
-            var pm = new ConnectionManager(
-                new MockSignalingChannel(),
-                {
-                    addPeer: function(peer) {
-                        peer.should.have.property('peerConnection');
-                        peer.should.have.property('dataChannel');
-                    }
-                });
-            pm.connect(function() {});
-        });
-        it('should set connected state to true', function(done) {
-            var pm = new ConnectionManager(new MockSignalingChannel(), new MockRouter(1));
-            pm.connect(function() {
-                assert.ok(pm._connected);
-                done();
-            });
-        });
-*/
+    });
+});

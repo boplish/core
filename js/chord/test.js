@@ -42,15 +42,31 @@ joined.push(chords[0]);
 
 for (var i = 1; i < chords.length; i++) {
     var bootstrapId = ids[Math.floor(Math.random() * i)];
-    chords[i].join(bootstrapId, printData.bind(this, chords[i], chords[i]._localNode.id(), bootstrapId));
+    //chords[i].join(bootstrapId, printData.bind(this, chords[i], chords[i]._localNode.id(), bootstrapId));
+    chords[i].join(bootstrapId, debug.bind(this, chords[i], chords[i]._localNode.id(), bootstrapId));
 }
 
 function debug(chord, id, bootstrapId, err, res) {
     joined.push(chord);
     joined.forEach(function(chord) {
         console.log(chord._localNode.toString());
-        //console.log("[" + chord._localNode._peer.id + "] has " + Object.keys(chord._remotes).length + " remotes ");
+        console.log("[" + chord._localNode._peer.id + "] has " + Object.keys(chord._remotes).length + " remotes ");
     });
+    if (joined.length === chords.length) {
+        var k = new BigInteger(Math.floor(Math.random() * 256));
+        chords[5].put(k, JSON.stringify({
+            a: Math.random(),
+            b: Math.random()
+        }), function(err) {
+            chords[1].get(k, function(err2, v) {
+                console.log("//{" + k + ": " + v + "}");
+            });
+        });
+        chords[9].route(chords[3].id(), "test", {
+            a: 1,
+            b: 2
+        });
+    }
 }
 
 function printData(chord, id, bootstrapId, err, res) {
@@ -77,15 +93,7 @@ function printData(chord, id, bootstrapId, err, res) {
         }
         console.log(";");
         /*
-        var k = new BigInteger(Math.floor(Math.random() * 256));
-        chords[5].put(k, JSON.stringify({
-            a: Math.random(),
-            b: Math.random()
-        }), function(err) {
-            chords[1].get(k, function(err2, v) {
-                console.log("//{" + k + ": " + v + "}");
-            });
-        });
+
         */
 
     }

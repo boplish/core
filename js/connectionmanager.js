@@ -123,7 +123,7 @@ ConnectionManager.prototype = {
             }
         }.bind(this);
         pendingOffer.offerId = this.utils.findSessionId(sessionDesc.sdp);
-        pc.setLocalDescription(sessionDesc);
+        pc.setLocalDescription(sessionDesc, function() {});
     },
 
     _onCreateOfferError: function(errorCallback, error) {
@@ -150,7 +150,7 @@ ConnectionManager.prototype = {
     _onReceiveAnswer: function(desc, from) {
         if (this._state === 'bootstrapping') {
             // TODO(max): check if we actually have a pending PC and ``drop'' is not set (glare).
-            this._bootstrap.pc.setRemoteDescription(new RTCSessionDescription(desc));
+            this._bootstrap.pc.setRemoteDescription(new RTCSessionDescription(desc), function() {});
             this._bootstrap.dc.onopen = function(ev) {
                 // nodejs wrtc-library does not include a channel reference in `ev.target`
                 this._router.addPeer(new Peer(from, this._bootstrap.pc, this._bootstrap.dc));
@@ -163,7 +163,7 @@ ConnectionManager.prototype = {
             if (pending === undefined) {
                 return; // we haven't offered to this node, silently discard
             }
-            pending.pc.setRemoteDescription(new RTCSessionDescription(desc));
+            pending.pc.setRemoteDescription(new RTCSessionDescription(desc), function() {});
             pending.dc.onopen = function(ev) {
                 // nodejs wrtc-library does not include a channel reference in `ev.target`
                 var peer = new Peer(from, pending.pc, pending.dc);
@@ -210,7 +210,7 @@ ConnectionManager.prototype = {
                 // silently discard this offer
                 return;
             }
-            this._bootstrap.pc.setRemoteDescription(new RTCSessionDescription(desc));
+            this._bootstrap.pc.setRemoteDescription(new RTCSessionDescription(desc), function() {});
             this._bootstrap.pc.ondatachannel = function(ev) {
                 ev.channel.onopen = function(ev2) {
                     // nodejs wrtc-library does not include a channel reference in `ev2.target`
@@ -241,7 +241,7 @@ ConnectionManager.prototype = {
                 }
             }
             var pc = new RTCPeerConnection(this._pcoptions);
-            pc.setRemoteDescription(new RTCSessionDescription(desc));
+            pc.setRemoteDescription(new RTCSessionDescription(desc), function() {});
             this._pending[from] = pendingOffer || {};
             this._pending[from].pc = pc;
             pc.ondatachannel = function(ev) {
@@ -270,7 +270,7 @@ ConnectionManager.prototype = {
                 }.bind(this), this._onCreateAnswerError.bind(this));
             }
         }.bind(this);
-        pc.setLocalDescription(new RTCSessionDescription(sessionDesc));
+        pc.setLocalDescription(new RTCSessionDescription(sessionDesc), function() {});
     },
 
     _onCreateAnswerError: function(error) {
