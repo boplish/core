@@ -29,7 +29,7 @@ Server.prototype.connect = function(to, callback) {
             var onmessage = local.dataChannel.onmessage;
             if (typeof(onmessage) === "function") {
                 onmessage.apply(local.dataChannel, [{
-                        data: JSON.stringify(msg)
+                        data: msg
                     },
                     self.id
                 ]);
@@ -41,7 +41,7 @@ Server.prototype.connect = function(to, callback) {
             var onmessage = remote.dataChannel.onmessage;
             if (typeof(onmessage) === "function") {
                 onmessage.apply(remote.dataChannel, [{
-                        data: JSON.stringify(msg)
+                        data: msg
                     },
                     to
                 ]);

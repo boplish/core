@@ -62,9 +62,16 @@ function debug(chord, id, bootstrapId, err, res) {
                 console.log("//{" + k + ": " + v + "}");
             });
         });
-        chords[9].route(chords[3].id(), "test", {
+        var to = chords[3].id();
+        chords[9].route(to, "test", {
             a: 1,
             b: 2
+        }, function(err) {
+            if (err) {
+                console.log("Error routing to", to.toString(), err);
+            } else {
+                console.log("routing successful");
+            }
         });
     }
 }

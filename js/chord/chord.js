@@ -227,12 +227,14 @@ Chord.prototype.remove = function(key) {
 
 Chord.prototype.route = function(to, type, payload, callback) {
     if (to === "*") {
-        this._localNode.route(to, type, payload);
+        this._localNode.route(to, type, payload, callback);
     } else if (this.id().equals(to)) {
         callback(null);
+    } else if (Range.inOpenInterval(to, this._localNode.predecessor_id(), this.id())) {
+        callback("No peer found with with ID " + to.toString());
     } else {
         this._localNode.successor(function(err, successorNode) {
-            successorNode.route(to, type, payload);
+            successorNode.route(to, type, payload, callback);
         });
     }
 };

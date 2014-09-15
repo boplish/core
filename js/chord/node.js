@@ -39,7 +39,9 @@ ChordNode.prototype = {
         UPDATE_SUCCESSOR: "UPDATE_SUCCESSOR",
         ACK: "ACK",
         PUT: "PUT",
-        GET: "GET"
+        GET: "GET",
+        ROUTE: "ROUTE",
+        ERROR: "ERROR"
     },
 
     toString: function() {
@@ -151,15 +153,15 @@ ChordNode.prototype = {
         });
     },
 
-    route: function(to, type, payload) {
+    route: function(to, type, payload, callback) {
         var self = this;
         this._send_request({
             type: this.message_types.ROUTE,
-            to: to,
+            to: to.toString(),
             proto_type: type,
             payload: payload
         }, function(err, msg) {
-            self.log("route result", msg);
+            callback(err);
         });
     },
 
@@ -258,11 +260,16 @@ ChordNode.prototype = {
 
     _route: function(msg) {
         var self = this;
-        this._chord.route(msg.to, msg.proto_type, msg.payload, function(err) {
-            self._send({
+        this._chord.route(new BigInteger(msg.to), msg.proto_type, msg.payload, function(err) {
+            var resp = {
                 type: self.message_types.ACK,
                 seqnr: msg.seqnr
-            });
+            };
+            if (err) {
+                resp.type = self.message_types.ERROR;
+                resp.error = err;
+            }
+            self._send(resp);
         });
     },
 
@@ -273,9 +280,6 @@ ChordNode.prototype = {
     },
 
     _send: function(msg) {
-        if (!this._localNode) {
-            msg.to = this._peer.id.toString();
-        }
         msg.from = this._chord.id().toString();
         this._peer.dataChannel.send(JSON.stringify(msg));
     },
@@ -294,7 +298,7 @@ ChordNode.prototype = {
 
     _handle_response: function(msg, callback) {
         delete this._pending[msg.seqnr];
-        callback(null, msg);
+        callback(msg.error, msg);
     },
 
     _handle_request: function(msg) {
