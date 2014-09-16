@@ -118,7 +118,9 @@ ConnectionManager.prototype = {
                 // spec specifies that a null candidate means that the ice gathering is complete
                 pc.onicecandidate = function() {};
                 pc.createOffer(function(offer) {
-                    this._router.route(to, 'signaling-protocol', offer);
+                    this._router.route(to, 'signaling-protocol', offer, function(err) {
+                        console.log(err);
+                    });
                 }.bind(this), this._onCreateOfferError.bind(this, errorCallback));
             }
         }.bind(this);

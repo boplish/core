@@ -94,7 +94,9 @@ BOPlishClient.prototype = {
      * @param payload {Object} The payload to send.
      */
     send: function(to, protocol, payload) {
-        this._router.route(to, protocol, payload);
+        this._router.route(to, protocol, payload, function(err) {
+            console.log("RESULT: " + err);
+        });
     },
     /**
      * Installs a handler for the given protocol name.

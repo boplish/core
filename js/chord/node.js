@@ -158,8 +158,10 @@ ChordNode.prototype = {
         this._send_request({
             type: this.message_types.ROUTE,
             to: to.toString(),
-            proto_type: type,
-            payload: payload
+            payload: {
+                type: type,
+                payload: payload
+            }
         }, function(err, msg) {
             callback(err);
         });
@@ -260,7 +262,7 @@ ChordNode.prototype = {
 
     _route: function(msg) {
         var self = this;
-        this._chord.route(new BigInteger(msg.to), msg.proto_type, msg.payload, function(err) {
+        this._chord.route(new BigInteger(msg.to), msg.payload.type, msg.payload.payload, function(err) {
             var resp = {
                 type: self.message_types.ACK,
                 seqnr: msg.seqnr

@@ -11,6 +11,9 @@ var Range = require("./range");
  * @constructor
  * @class This is a Chord DHT implementation using WebRTC data channels.
  *
+ * @param id {BigInteger} the ID of this Chord instance
+ * @param fallbackSignaling {WebSocket} The fallback channel to the bootstrap
+ * server
  * @param connectionManager {ConnectionManager} The connection manager instance
  * to be used for requesting data channel connections.
  */
@@ -21,7 +24,6 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
 
     Helper.defineProperties(this);
 
-    // TODO(max): externalize this so Node can reuse it upon (de-)serializing
     if (!id) {
         id = Chord.randomId();
     }
@@ -31,6 +33,7 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
     this._localNode._predecessor = id;
     this._remotes = {};
     this._connectionManager = connectionManager;
+    this._messageCallbacks = {};
     this._fingerTable = {};
     this._m = 8;
     this._joined = false; // are we joined to a Chord ring, yet?
@@ -229,7 +232,13 @@ Chord.prototype.route = function(to, type, payload, callback) {
     if (to === "*") {
         this._localNode.route(to, type, payload, callback);
     } else if (this.id().equals(to)) {
-        callback(null);
+        try {
+            this._messageCallbacks[type](payload, payload.from);
+            callback(null);
+        } catch (e) {
+            this.log('Unable to handle message of type ' + type + ' from ' + payload.from + ' because no callback is registered: ' + e);
+            callback("No application for protocol '" + type + "'");
+        }
     } else if (Range.inOpenInterval(to, this._localNode.predecessor_id(), this.id())) {
         callback("No peer found with with ID " + to.toString());
     } else {
@@ -240,7 +249,7 @@ Chord.prototype.route = function(to, type, payload, callback) {
 };
 
 Chord.prototype.registerDeliveryCallback = function(protocol, callback) {
-    // TODO
+    this._messageCallbacks[protocol] = callback;
 };
 
 Chord.randomId = function() {

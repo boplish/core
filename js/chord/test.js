@@ -63,6 +63,9 @@ function debug(chord, id, bootstrapId, err, res) {
             });
         });
         var to = chords[3].id();
+        chords[3].registerDeliveryCallback("test", function(msg, from) {
+            console.log(msg, from);
+        });
         chords[9].route(to, "test", {
             a: 1,
             b: 2
