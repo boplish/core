@@ -40,9 +40,7 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
         return;
     }
 
-    var hash = new sha1();
-    hash.update(Math.random().toString());
-    this.id = sha1.hexString(hash.digest());
+    var id = Router.randomId();
 
     if (bootstrapHost.substring(bootstrapHost.length - 1, bootstrapHost.length) !== '/') { // add trailing slash if missing
         bootstrapHost += '/';
@@ -51,7 +49,7 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
         errorCallback('Syntax error in bootstrapHost parameter');
         return;
     }
-    var channel = new WebSocket(bootstrapHost + 'ws/' + this.id);
+    var channel = new WebSocket(bootstrapHost + 'ws/' + id.toString());
 
     channel.onerror = function(ev) {
         errorCallback('Failed to open connection to bootstrap server:' + bootstrapHost + ': ' + ev);
@@ -62,7 +60,7 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     }.bind(this);
 
     this._connectionManager = new ConnectionManager();
-    this._router = new Router(this.id, channel, this._connectionManager);
+    this._router = new Router(id, channel, this._connectionManager);
 };
 
 BOPlishClient.prototype = {
@@ -96,12 +94,10 @@ BOPlishClient.prototype = {
             to: bopuri.uid,
             from: this.id,
         };
-        var hash = new sha1();
-        hash.update(bopuri.uid);
-        var bopidHash = sha1.hexString(hash.digest());
-
+        var bopidHash = sha1.bigIntHash(bopuri.uid);
+        
         this._router.get(bopidHash, function(peerId) {
-            this._router.route(peerId, protcolIdentifier, msg);
+            this._router.route(peerId, protocolIdentifier, msg);
         });
     },
     /**

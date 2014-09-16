@@ -280,6 +280,12 @@ sha1.bigInteger = function(digest) {
     return value;
 };
 
+sha1.bigIntHash = function(val) {
+    var _sha1 = new sha1();
+    _sha1.update(val);
+    return sha1.bigInteger(_sha1.digest());
+};
+
 if (typeof(module) !== 'undefined') {
     module.exports = sha1;
 }

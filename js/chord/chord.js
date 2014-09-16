@@ -253,9 +253,8 @@ Chord.prototype.registerDeliveryCallback = function(protocol, callback) {
 };
 
 Chord.randomId = function() {
-    var hash = new Sha1();
-    hash.update(Math.random().toString());
-    return Sha1.bigInteger(hash.digest());
+    var randomId = Sha1.bigIntHash(Math.random().toString());
+    return randomId;
 };
 
 if (typeof(module) !== 'undefined') {
