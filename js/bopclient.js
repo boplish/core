@@ -67,8 +67,8 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
         var bopID = Math.random().toString(36).replace(/[^a-z]+/g, '') + '@id.com';
         var auth = {
             chordId: id.toString(),
-            timestamp: new Date();
-        }
+            timestamp: new Date()
+        };
         // todo(chris): update auth object at interval and check for timeouts
         this._router.put(sha1.bigIntHash(bopID), auth, successCallback);
     }
@@ -89,7 +89,7 @@ BOPlishClient.prototype = {
             onmessage: function(from, msg) {},
             send: function(bopuri, msg) {
                 if (!msg) {
-                    throw new Error("Trying to send empty message");
+                    throw new Error('Trying to send empty message');
                 }
                 self._send(bopuri, protocolIdentifier, msg);
             }
