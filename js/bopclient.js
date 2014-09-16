@@ -40,8 +40,6 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
         return;
     }
 
-    var id = Router.randomId();
-
     if (bootstrapHost.substring(bootstrapHost.length - 1, bootstrapHost.length) !== '/') { // add trailing slash if missing
         bootstrapHost += '/';
     }
@@ -49,6 +47,7 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
         errorCallback('Syntax error in bootstrapHost parameter');
         return;
     }
+    var id = Router.randomId();
     var channel = new WebSocket(bootstrapHost + 'ws/' + id.toString());
 
     channel.onerror = function(ev) {
@@ -59,8 +58,11 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
         this._connectionManager.bootstrap(this._router, _authBopId.bind(this), errorCallback);
     }.bind(this);
 
+    this._messageCallbacks = {};
+
     this._connectionManager = new ConnectionManager();
     this._router = new Router(id, channel, this._connectionManager);
+    this._router.registerDeliveryCallback('boplish-message', this._onmessage);
 
     function _authBopId() {
         // creating a random bopid (for now) and store it in the dht
@@ -86,7 +88,7 @@ BOPlishClient.prototype = {
         var self = this;
         var protocol = {
             identifier: protocolIdentifier,
-            onmessage: function(from, msg) {},
+            onmessage: function() {},
             send: function(bopuri, msg) {
                 if (!msg) {
                     throw new Error('Trying to send empty message');
@@ -94,23 +96,40 @@ BOPlishClient.prototype = {
                 self._send(bopuri, protocolIdentifier, msg);
             }
         };
-        this._router.registerDeliveryCallback(protocolIdentifier, function(msg) {
-            protocol.onmessage(msg.from, msg.payload);
-        });
+        this._messageCallbacks[protocolIdentifier] = protocol.onmessage;
         return protocol;
     },
+
+    /**
+     * todo
+     *
+     */
     _send: function(bopuri, protocolIdentifier, msg) {
         msg = {
             payload: msg,
             to: bopuri.uid,
             from: this.id,
+            type: protocolIdentifier
         };
         var bopidHash = sha1.bigIntHash(bopuri.uid);
         
         this._router.get(bopidHash, function(peerId) {
-            this._router.route(peerId, protocolIdentifier, msg);
+            this._router.route(peerId, 'boplish-message', msg);
         });
     },
+
+    /**
+     * todo
+     *
+     */
+    _onmessage: function(msg) {
+        try {
+            this._messageCallbacks[msg.type](msg.payload, msg.from);
+        } catch (e) {
+            console.log('Unable to handle message of type ' + msg.type + ' from ' + msg.from + ' because no callback is registered: ' + e);
+        }
+    },
+
     /**
      * Installs a special callback that receives all messages despite their
      * protocol.
