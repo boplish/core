@@ -3,8 +3,8 @@
 
 var bowser = require('bowser');
 var ConnectionManager = require('./connectionmanager.js');
-var Router = require('./router.js');
 var sha1 = require('./third_party/sha1.js');
+var Router = require('./chord/chord');
 
 /**
  * @constructor
@@ -56,11 +56,22 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     };
 
     channel.onopen = function() {
-        this._connectionManager.bootstrap(this._router, successCallback, errorCallback);
+        this._connectionManager.bootstrap(this._router, _authBopId.bind(this), errorCallback);
     }.bind(this);
 
     this._connectionManager = new ConnectionManager();
     this._router = new Router(id, channel, this._connectionManager);
+
+    function _authBopId() {
+        // creating a random bopid (for now) and store it in the dht
+        var bopID = Math.random().toString(36).replace(/[^a-z]+/g, '') + '@id.com';
+        var auth = {
+            chordId: id.toString(),
+            timestamp: new Date();
+        }
+        // todo(chris): update auth object at interval and check for timeouts
+        this._router.put(sha1.bigIntHash(bopID), auth, successCallback);
+    }
 };
 
 BOPlishClient.prototype = {
