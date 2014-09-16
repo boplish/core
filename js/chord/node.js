@@ -138,7 +138,7 @@ ChordNode.prototype = {
         this._send_request({
             type: this.message_types.PUT,
             key: key.toString(),
-            value: value.toString()
+            value: value
         }, function(err, msg) {
             callback(null, null);
         });

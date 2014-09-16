@@ -54,10 +54,10 @@ function debug(chord, id, bootstrapId, err, res) {
     });
     if (joined.length === chords.length) {
         var k = new BigInteger(Math.floor(Math.random() * 256));
-        chords[5].put(k, JSON.stringify({
+        chords[5].put(k, {
             a: Math.random(),
             b: Math.random()
-        }), function(err) {
+        }, function(err) {
             chords[1].get(k, function(err2, v) {
                 console.log("//{" + k + ": " + v + "}");
             });
