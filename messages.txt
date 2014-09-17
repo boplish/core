@@ -1,0 +1,29 @@
+var ping_message = {
+    type: "ROUTE",
+    to: "12345",
+    from: "67890",
+    payload: {
+        to: "max@example.com",
+        from: "chris@example.org",
+        type: "pingpong",
+        payload: {
+            type: "ping",
+            timestamp: 12345
+        }
+    }
+};
+
+var offer_message = {
+    type: "ROUTE",
+    to: "12345",
+    from: "67890",
+    payload: {
+        type: "signaling",
+        to: "12345",
+        from: "67890",
+        payload: {
+            type: "offer",
+            offer: "OFFER SDP"
+        }
+    }
+};

@@ -1,0 +1,2 @@
+* Der Bootstrap-Server muss das Routing-Protokoll sprechen, weil er sonst z.B.
+  nicht die "denied"-Nachrichten verschicken kann; er kennt ja das Format nicht.
