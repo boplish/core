@@ -112,7 +112,7 @@ BOPlishClient.prototype = {
             type: protocolIdentifier
         };
         var bopidHash = sha1.bigIntHash(bopuri.uid);
-        
+
         this._router.get(bopidHash, function(peerId) {
             this._router.route(peerId, 'boplish-message', msg);
         });
