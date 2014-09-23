@@ -22,7 +22,7 @@ describe('Router', function() {
             router.should.be.an.instanceof(Router);
         });
         it('should set the ID correctly', function() {
-            router.should.have.property('_id', '1');
+            router.should.have.property('id', '1');
         });
     });
     describe('#addPeer()', function() {
@@ -76,23 +76,26 @@ describe('Router', function() {
             Object.keys(router._messageCallbacks).should.have.length(2);
         });
     });
-    describe('#route()', function() {
+    describe('#route()', function(done) {
         it('should deliver messages directed to this id locally by calling `deliver()`', function(done) {
             var spy = sinon.spy(router, 'deliver');
             var testMsg = {
-                data: 'test'
+                type: 'test',
+                payload: {
+                    data: 'test'
+                }
             };
             router.registerDeliveryCallback('test', function(msg) {
                 sinon.assert.calledOnce(spy);
                 sinon.assert.calledWith(spy, {
-                    from: router._id,
-                    to: router._id,
-                    type: 'test',
-                    payload: msg
+                    from: router.id,
+                    to: router.id,
+                    type: 'route',
+                    payload: testMsg
                 });
                 done();
             });
-            router.route(router._id, 'test', testMsg);
+            router.route(router.id, testMsg);
         });
         it('should route messages directed to a remote peer', function() {
             var dc = new DataChannel();
@@ -100,9 +103,12 @@ describe('Router', function() {
             var peer = new Peer('2', sinon.stub(new RTCPeerConnection()), dc);
             router.addPeer(peer);
             var testMsg = {
-                data: 'xyz',
+                type: 'test',
+                payload: {
+                    data: 'test'
+                }
             };
-            router.route('2', 'test', testMsg);
+            router.route('2', testMsg);
             // once for discovery, twice for actual routing of the msg
             sinon.assert.calledTwice(stub);
         });
@@ -110,9 +116,13 @@ describe('Router', function() {
             var ws = {
                 send: function() {}
             };
+            var testMsg = {
+                type: 'test',
+                payload: {}
+            };
             var stub = sinon.stub(ws, 'send');
             var router = new Router('1', ws);
-            router.route('2', 'test', {});
+            router.route('2', testMsg);
             sinon.assert.calledOnce(stub);
         });
     });
@@ -120,76 +130,84 @@ describe('Router', function() {
         it('should be called when an incoming message is directed to this peer', function(done) {
             var spy = sinon.spy(router, 'deliver');
             var testMsg = {
-                data: 'test'
+                type: 'test',
+                payload: {}
             };
             router.registerDeliveryCallback('test', function(msg) {
                 sinon.assert.calledOnce(spy);
                 sinon.assert.calledWith(spy, {
-                    from: router._id,
-                    to: router._id,
-                    type: 'test',
-                    payload: msg
+                    from: router.id,
+                    to: router.id,
+                    type: 'route',
+                    payload: testMsg
                 });
                 done();
             });
-            router.route(router._id, 'test', testMsg);
+            router.route(router.id, testMsg);
         });
         it('should be able to determine the type of a incoming message and forward to the corresponding callback', function(done) {
             var spy = sinon.spy(router, 'deliver');
             var testMsg1 = {
-                data: 'an offer message'
+                type: 'offer',
+                payload: {}
             };
             var testMsg2 = {
-                data: 'some discovery msg'
+                type: 'discovery',
+                payload: {}
             };
             router.registerDeliveryCallback('offer', function(msg) {
                 sinon.assert.callCount(spy, 1);
                 sinon.assert.calledWith(spy, {
-                    from: router._id,
-                    to: router._id,
-                    payload: msg,
-                    type: 'offer'
+                    from: router.id,
+                    to: router.id,
+                    payload: testMsg1,
+                    type: 'route'
                 });
             });
             router.registerDeliveryCallback('discovery', function(msg) {
                 sinon.assert.callCount(spy, 2);
                 sinon.assert.calledWith(spy, {
-                    from: router._id,
-                    to: router._id,
-                    type: 'discovery',
-                    payload: msg
+                    from: router.id,
+                    to: router.id,
+                    type: 'route',
+                    payload: testMsg2
                 });
                 done();
             });
-            router.route(router._id, 'offer', testMsg1);
-            router.route(router._id, 'discovery', testMsg2);
+            router.route(router.id, testMsg1);
+            router.route(router.id, testMsg2);
         });
     });
     describe('#neighbor discovery', function() {
         it('should call the answer callback when an discovery answer is received', function() {
             var stub = sinon.stub(router._messageCallbacks, 'discovery');
             var fakeDiscoveryAnswerMessage = {
-                type: 'answer',
+                type: 'discovery',
                 payload: {
-                    ids: [0, 1]
+                    type: 'answer',
+                    payload: {
+                        ids: [0, 1]
+                    }
                 }
             };
-            router.route(router._id, 'discovery', fakeDiscoveryAnswerMessage);
+            router.route(router.id, fakeDiscoveryAnswerMessage);
 
             sinon.assert.calledOnce(stub);
             sinon.assert.calledWith(stub, fakeDiscoveryAnswerMessage);
         });
         it('should call the request callback when an request message is received', function() {
             var stub = sinon.stub(router._messageCallbacks, 'discovery');
+            var testMsg = {
+                type: 'discovery',
+                payload: {
+                    type: 'request'
+                }
+            };
 
-            router.route(router._id, 'discovery', {
-                type: 'request'
-            });
+            router.route(router.id, testMsg);
 
             sinon.assert.calledOnce(stub);
-            sinon.assert.calledWith(stub, {
-                type: 'request'
-            });
+            sinon.assert.calledWith(stub, testMsg);
         });
         it('should call an error callback when no answer is received in time');
     });

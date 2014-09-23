@@ -4,7 +4,7 @@
 var bowser = require('bowser');
 var ConnectionManager = require('./connectionmanager.js');
 var sha1 = require('./third_party/sha1.js');
-var Router = require('./chord/chord');
+var Router = require('./router.js');
 
 /**
  * @constructor
@@ -50,6 +50,8 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     var id = Router.randomId();
     var channel = new WebSocket(bootstrapHost + 'ws/' + id.toString());
 
+    this.bopid = Math.random().toString(36).replace(/[^a-z]+/g, '') + '@id.com';
+
     channel.onerror = function(ev) {
         errorCallback('Failed to open connection to bootstrap server:' + bootstrapHost + ': ' + ev);
     };
@@ -58,21 +60,20 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
         this._connectionManager.bootstrap(this._router, _authBopId.bind(this), errorCallback);
     }.bind(this);
 
-    this._messageCallbacks = {};
-
     this._connectionManager = new ConnectionManager();
     this._router = new Router(id, channel, this._connectionManager);
-    this._router.registerDeliveryCallback('boplish-message', this._onmessage);
 
     function _authBopId() {
         // creating a random bopid (for now) and store it in the dht
-        var bopID = Math.random().toString(36).replace(/[^a-z]+/g, '') + '@id.com';
         var auth = {
             chordId: id.toString(),
             timestamp: new Date()
         };
-        // todo(chris): update auth object at interval and check for timeouts
-        this._router.put(sha1.bigIntHash(bopID), auth, successCallback);
+        this._router.put(sha1.bigIntHash(this.bopid), auth);
+        setInterval(function() {
+            this._router.put(sha1.bigIntHash(this.bopid), auth);
+        }.bind(this), 500);
+        successCallback();
     }
 };
 
@@ -96,7 +97,9 @@ BOPlishClient.prototype = {
                 self._send(bopuri, protocolIdentifier, msg);
             }
         };
-        this._messageCallbacks[protocolIdentifier] = protocol.onmessage;
+        this._router.registerDeliveryCallback(protocolIdentifier, function(msg) {
+            protocol.onmessage(msg.from, msg.payload);
+        });
         return protocol;
     },
 
@@ -107,27 +110,15 @@ BOPlishClient.prototype = {
     _send: function(bopuri, protocolIdentifier, msg) {
         msg = {
             payload: msg,
-            to: bopuri.uid,
-            from: this.id,
+            to: bopuri,
+            from: this.bopid,
             type: protocolIdentifier
         };
-        var bopidHash = sha1.bigIntHash(bopuri.uid);
+        var bopidHash = sha1.bigIntHash(bopuri);
 
-        this._router.get(bopidHash, function(peerId) {
-            this._router.route(peerId, 'boplish-message', msg);
-        });
-    },
-
-    /**
-     * todo
-     *
-     */
-    _onmessage: function(msg) {
-        try {
-            this._messageCallbacks[msg.type](msg.payload, msg.from);
-        } catch (e) {
-            console.log('Unable to handle message of type ' + msg.type + ' from ' + msg.from + ' because no callback is registered: ' + e);
-        }
+        this._router.get(bopidHash, function(auth) {
+            this._router.route(auth.chordId, msg);
+        }.bind(this));
     },
 
     /**
