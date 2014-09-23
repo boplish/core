@@ -155,7 +155,7 @@ ConnectionManager.prototype = {
                 this._onReceiveAnswer(msg.payload.answer, new BigInteger(msg.from));
                 break;
             case 'denied':
-                this._onOfferDenied(msg.payload, new BigInteger(msg.from));
+                this._onOfferDenied(msg.payload, msg.from);
                 break;
             default:
                 console.log('ConnectionManager: Discarding JSEP message because the type is unknown: ' + JSON.stringify(msg));

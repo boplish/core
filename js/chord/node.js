@@ -16,7 +16,7 @@ var ChordNode = function(peer, chord, localNode) {
     this._pending = {};
     this._seqnr = 0;
     this.debug = true;
-    this._localNode = !! localNode;
+    this._localNode = !!localNode;
     this._store = {};
 
     return this;
