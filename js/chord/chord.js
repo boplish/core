@@ -67,7 +67,7 @@ var Helper = {
     },
 
     fingerTableIntervalStart: function(i) {
-        return this.id().add(BigInteger(2).pow(i - 1)).mod(BigInteger(2).pow(this._m));
+        return this.id.add(BigInteger(2).pow(i - 1)).mod(BigInteger(2).pow(this._m));
     },
 
     defineProperties: function(object) {
@@ -78,7 +78,7 @@ var Helper = {
         });
         Object.defineProperty(object, "id", {
             get: function() {
-                return object._localNode.id.bind(object._localNode);
+                return object._localNode.id.bind(object._localNode)();
             },
             set: function(id) {}
         });
@@ -106,7 +106,7 @@ Chord.prototype._update_others = function() {
 Chord.prototype._closest_preceding_finger = function(id) {
     var i;
     for (i = this._m; i >= 1; i--) {
-        if (Range.inOpenInterval(this._fingerTable[i].node.id(), this.id(), id)) {
+        if (Range.inOpenInterval(this._fingerTable[i].node.id(), this.id, id)) {
             return this._fingerTable[i].node;
         }
     }
@@ -114,7 +114,7 @@ Chord.prototype._closest_preceding_finger = function(id) {
 };
 
 Chord.prototype.log = function(msg) {
-    console.log("[" + this._localNode._peer.id + "] ", msg, arguments.length > 1 ? Array.prototype.slice.call(arguments, 1) : "");
+    console.log("[" + this._localNode._peer.id.toString() + "] ", msg, arguments.length > 1 ? Array.prototype.slice.call(arguments, 1) : "");
 };
 
 /**
@@ -135,13 +135,37 @@ Chord.prototype.create = function(callback) {
 Chord.prototype.join = function(bootstrap_id, callback) {
     var i, self = this;
     self._connectionManager.connect(bootstrap_id, function(err, peer) {
+        if (err) {
+            self.log(err);
+            return;
+        }
         var bootstrapNode = new ChordNode(peer, self);
         bootstrapNode.find_successor(self._localNode._peer.id, function(err, successor) {
+            if (err) {
+                self.log(err);
+                return;
+            }
             self._connectionManager.connect(successor, function(err, successorPeer) {
+                if (err) {
+                    self.log(err);
+                    return;
+                }
                 self._localNode._successor = new ChordNode(successorPeer, self);
                 self._localNode._successor.find_predecessor(self._localNode._peer.id, function(err, predecessor) {
+                    if (err) {
+                        self.log(err);
+                        return;
+                    }
                     self._localNode._successor.update_predecessor(self._localNode.id(), function(err, res) {
+                        if (err) {
+                            self.log(err);
+                            return;
+                        }
                         self._connectionManager.connect(predecessor, function(err, predecessorPeer) {
+                            if (err) {
+                                self.log(err);
+                                return;
+                            }
                             self._localNode._predecessor = new ChordNode(predecessorPeer, self);
                             self._localNode._predecessor.update_successor(self._localNode.id(), function() {
                                 callback();
@@ -187,9 +211,17 @@ Chord.prototype.find_predecessor = function(id, callback) {
  *
  * @param dc DataChannel connection to remote peer
  */
-Chord.prototype.add_peer = function(peer, callback) {
+Chord.prototype.addPeer = function(peer, callback) {
     // TODO: what if we already have a node with this ID?
-    this._remotes[peer.id] = new ChordNode(peer, this);
+    if (Object.keys(this._remotes).length === 0) {
+        this.join(peer.id, function() {
+            console.log("JOINED");
+            callback();
+        });
+    } else {
+        this._remotes[peer.id] = new ChordNode(peer, this);
+        callback();
+    }
     // TODO: implement removing peer/updating finger table
     //peer.peerConnection.onclosedconnection = this.removePeer.bind(this, peer);
     // TODO: update finger table
@@ -229,9 +261,10 @@ Chord.prototype.remove = function(key) {
 };
 
 Chord.prototype.route = function(to, message, callback) {
+    this.log("routing " + JSON.stringify(message) + " to " + to.toString());
     if (to === "*") {
         this._localNode.route(to, message, callback);
-    } else if (this.id().equals(to)) {
+    } else if (this.id.equals(to)) {
         try {
             this._messageCallbacks[message.type](message);
             callback(null);
@@ -239,8 +272,8 @@ Chord.prototype.route = function(to, message, callback) {
             this.log('Unable to handle message of type ' + message.type + ' because no callback is registered: ' + e);
             callback("No application for protocol '" + message.type + "'");
         }
-    } else if (Range.inOpenInterval(to, this._localNode.predecessor_id(), this.id())) {
-        callback("No peer found with with ID " + to.toString());
+    } else if (Range.inOpenInterval(to, this._localNode.predecessor_id(), this.id)) {
+        this._localNode.route(to, message, callback);
     } else {
         this._localNode.successor(function(err, successorNode) {
             successorNode.route(to, message, callback);
@@ -249,6 +282,7 @@ Chord.prototype.route = function(to, message, callback) {
 };
 
 Chord.prototype.registerDeliveryCallback = function(protocol, callback) {
+    this.log("registering callback for", protocol);
     this._messageCallbacks[protocol] = callback;
 };
 

@@ -62,7 +62,7 @@ function debug(chord, id, bootstrapId, err, res) {
                 console.log("//{" + k + ": " + JSON.stringify(v) + "}");
             });
         });
-        var to = chords[3].id();
+        var to = chords[3].id;
         chords[3].registerDeliveryCallback("signaling", function(msg) {
             console.log("Incoming 'signaling' message", msg);
         });

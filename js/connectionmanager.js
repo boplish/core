@@ -85,32 +85,27 @@ ConnectionManager.prototype = {
      * Creates a DataChannel connection to the given peer.
      *
      * @param to ID of the remote peer
-     * @param successCallback {Function} called when the connection has been
-     * established
-     * @param errorCallback {Function} called when the connection establishment
-     * failed
      */
-    connect: function(to, successCallback, errorCallback) {
+    connect: function(to, callback) {
         if (this._state !== 'ready') {
-            errorCallback('Invalid state');
+            callback('Invalid state');
             return;
         }
         if (this._pending[to] !== undefined) {
-            errorCallback('Already connecting');
+            callback('Already connecting');
         }
         var pc = new RTCPeerConnection(this._pcoptions);
         var dc = pc.createDataChannel(null, {});
         this._pending[to] = {
             pc: pc,
             dc: dc,
-            onsuccess: successCallback,
-            onerror: errorCallback,
+            callback: callback,
         };
         pc.createOffer(this._onCreateOfferSuccess.bind(this, pc, to, this._pending[to],
-            errorCallback), this._onCreateOfferError.bind(this, errorCallback));
+            callback), this._onCreateOfferError.bind(this, callback));
     },
 
-    _onCreateOfferSuccess: function(pc, to, pendingOffer, errorCallback, sessionDesc) {
+    _onCreateOfferSuccess: function(pc, to, pendingOffer, callback, sessionDesc) {
         if (pendingOffer.drop) {
             return;
         }
@@ -119,9 +114,10 @@ ConnectionManager.prototype = {
                 // spec specifies that a null candidate means that the ice gathering is complete
                 pc.onicecandidate = function() {};
                 pc.createOffer(function(offer) {
+                    console.log("routing offer from " + this._router.id.toString());
                     this._router.route(to, {
                         type: 'signaling-protocol',
-                        to: to,
+                        to: to.toString(),
                         from: this._router.id.toString(),
                         payload: {
                             type: "offer",
@@ -130,16 +126,16 @@ ConnectionManager.prototype = {
                     }, function(err) {
                         console.log(err);
                     });
-                }.bind(this), this._onCreateOfferError.bind(this, errorCallback));
+                }.bind(this), this._onCreateOfferError.bind(this, callback));
             }
         }.bind(this);
         pendingOffer.offerId = this.utils.findSessionId(sessionDesc.sdp);
         pc.setLocalDescription(sessionDesc, function() {});
     },
 
-    _onCreateOfferError: function(errorCallback, error) {
+    _onCreateOfferError: function(callback, error) {
         // TODO(max): clean up state (delete PC object etc.)
-        errorCallback(error);
+        callback(error);
     },
 
     _onMessage: function(msg) {
@@ -147,6 +143,7 @@ ConnectionManager.prototype = {
             console.log('ConnectionManager: Discarding JSEP message because the type is unknown: ' + JSON.stringify(msg));
             return;
         }
+
         switch (msg.payload.type) {
             case 'offer':
                 this._onReceiveOffer(msg.payload.offer, new BigInteger(msg.from));
@@ -168,10 +165,12 @@ ConnectionManager.prototype = {
             this._bootstrap.pc.setRemoteDescription(new RTCSessionDescription(desc), function() {});
             this._bootstrap.dc.onopen = function(ev) {
                 // nodejs wrtc-library does not include a channel reference in `ev.target`
-                this._router.addPeer(new Peer(from, this._bootstrap.pc, this._bootstrap.dc));
                 this._state = 'ready';
-                this._bootstrap.onsuccess();
-                this._bootstrap = null;
+                var peer = new Peer(from, this._bootstrap.pc, this._bootstrap.dc);
+                this._router.addPeer(peer, function(err) {
+                    this._bootstrap.onsuccess();
+                    this._bootstrap = null;
+                });
             }.bind(this);
         } else {
             var pending = this._pending[from];
@@ -182,27 +181,33 @@ ConnectionManager.prototype = {
             pending.dc.onopen = function(ev) {
                 // nodejs wrtc-library does not include a channel reference in `ev.target`
                 var peer = new Peer(from, pending.pc, pending.dc);
-                this._router.addPeer(peer);
-                if (typeof(pending.onsuccess) === 'function') {
-                    // TODO(max): would it make sense to pass the remote peer's
-                    // ID to the handler?
-                    pending.onsuccess();
-                }
-                delete this._pending[from];
-                this._connections[from] = peer;
+                this._router.addPeer(peer, function(err) {
+                    if (typeof(pending.callback) === 'function') {
+                        // TODO(max): would it make sense to pass the remote peer's
+                        // ID to the handler?
+                        pending.callback();
+                    }
+                    delete this._pending[from];
+                    this._connections[from] = peer;
+                }.bind(this));
             }.bind(this);
         }
     },
 
     _onReceiveOffer: function(desc, from) {
+        console.log("handling offer from " + from);
         // if we're already connected or are already processing an offer from
         // this peer, deny this offer
         if (this._connections[from] !== undefined || this._pending[from] !== undefined) {
             this._router.route(from, {
                 type: 'signaling-protocol',
+                to: from.toString(),
+                from: this._router.id.toString(),
                 payload: {
                     type: 'denied'
                 }
+            }, function(err) {
+                console.log(err);
             });
         }
 
@@ -232,12 +237,13 @@ ConnectionManager.prototype = {
             this._bootstrap.pc.ondatachannel = function(ev) {
                 ev.channel.onopen = function(ev2) {
                     // nodejs wrtc-library does not include a channel reference in `ev2.target`
-                    var peer = new Peer(from, this._bootstrap.pc, ev.channel);
-                    this._router.addPeer(peer);
                     this._state = 'ready';
-                    this._bootstrap.onsuccess();
-                    this._connections[from] = peer;
-                    this._bootstrap = null;
+                    var peer = new Peer(from, this._bootstrap.pc, ev.channel);
+                    this._router.addPeer(peer, function(err) {
+                        this._bootstrap.onsuccess();
+                        this._bootstrap = null;
+                        this._connections[from] = peer;
+                    }.bind(this));
                 }.bind(this);
             }.bind(this);
             this._bootstrap.pc.createAnswer(this._onCreateAnswerSuccess.bind(this, from, this._bootstrap.pc), this._onCreateAnswerError.bind(this));
@@ -248,8 +254,7 @@ ConnectionManager.prototype = {
                 if (offerId > pendingOffer.offerId) {
                     // discard our offer and accept this one
                     newPendingOffer = {
-                        onsuccess: pendingOffer.onsuccess,
-                        onerror: pendingOffer.onerror,
+                        callback: pendingOffer.callback,
                     };
                     pendingOffer = newPendingOffer;
                     delete this._pending[from];
@@ -266,12 +271,13 @@ ConnectionManager.prototype = {
                 ev.channel.onopen = function(ev2) {
                     // nodejs wrtc-library does not include a channel reference in `ev2.target`
                     var peer = new Peer(from, pc, ev.channel);
-                    this._router.addPeer(peer);
-                    if (typeof(this._pending[from].onsuccess) === 'function') {
-                        this._pending[from].onsuccess();
-                    }
-                    delete this._pending[from];
-                    this._connections[from] = peer;
+                    this._router.addPeer(peer, function(err) {
+                        if (typeof(this._pending[from].callback) === 'function') {
+                            this._pending[from].callback();
+                        }
+                        delete this._pending[from];
+                        this._connections[from] = peer;
+                    }.bind(this));
                 }.bind(this);
             }.bind(this);
             pc.createAnswer(this._onCreateAnswerSuccess.bind(this, from, pc), this._onCreateAnswerError.bind(this));
@@ -286,12 +292,14 @@ ConnectionManager.prototype = {
                 pc.createAnswer(function(answer) {
                     this._router.route(to, {
                         type: 'signaling-protocol',
-                        to: to,
+                        to: to.toString(),
                         from: this._router.id.toString(),
                         payload: {
                             type: "answer",
                             answer: answer
                         }
+                    }, function(err) {
+                        console.log(err);
                     });
                 }.bind(this), this._onCreateAnswerError.bind(this));
             }
@@ -309,13 +317,15 @@ ConnectionManager.prototype = {
      * just has to sit and wait for an offer. Eventually the successCallback is
      * called.
      */
-    _onOfferDenied: function(desc) {
+    _onOfferDenied: function(desc, from) {
         if (this._state === 'bootstrapping') {
             this._bootstrap.pc = new RTCPeerConnection(this._pcoptions);
             this._bootstrap.dc = this._bootstrap.pc.createDataChannel(null, {});
             this._bootstrap.offerId = null;
             this._bootstrap.onsuccess();
             this._bootstrap.onsuccess = function() {};
+        } else {
+            this._pending[from].callback("Offer denied");
         }
     },
 

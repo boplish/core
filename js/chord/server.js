@@ -29,10 +29,8 @@ Server.prototype.connect = function(to, callback) {
             var onmessage = local.dataChannel.onmessage;
             if (typeof(onmessage) === "function") {
                 onmessage.apply(local.dataChannel, [{
-                        data: msg
-                    },
-                    self.id
-                ]);
+                    data: msg
+                }]);
             }
         }
     });
@@ -41,10 +39,8 @@ Server.prototype.connect = function(to, callback) {
             var onmessage = remote.dataChannel.onmessage;
             if (typeof(onmessage) === "function") {
                 onmessage.apply(remote.dataChannel, [{
-                        data: msg
-                    },
-                    to
-                ]);
+                    data: msg
+                }]);
             }
         }
     });

@@ -6,6 +6,10 @@ var ChordNode = function(peer, chord, localNode) {
         return new ChordNode(peer, chord);
     }
 
+    if (typeof peer === "undefined") {
+        throw new Error("Trying to instantiate a ChordNode without a Peer");
+    }
+
     this._peer = peer;
     if (this._peer.dataChannel) {
         this._peer.dataChannel.onmessage = this._onmessage.bind(this);
@@ -16,7 +20,7 @@ var ChordNode = function(peer, chord, localNode) {
     this._pending = {};
     this._seqnr = 0;
     this.debug = true;
-    this._localNode = !!localNode;
+    this._localNode = !! localNode;
     this._store = {};
 
     return this;
@@ -46,6 +50,10 @@ ChordNode.prototype = {
 
     toString: function() {
         return "[" + this._peer.id.toString() + "," + this.successor_id().toString() + "," + this.predecessor_id().toString() + "]";
+    },
+
+    id: function() {
+        return this._peer.id;
     },
 
     successor: function(cb) {
@@ -102,10 +110,6 @@ ChordNode.prototype = {
         }, function(err, msg) {
             cb(null, null);
         });
-    },
-
-    id: function() {
-        return this._peer.id;
     },
 
     predecessor_id: function() {
@@ -181,7 +185,7 @@ ChordNode.prototype = {
         if (!this.debug) {
             return;
         }
-        console.log("[" + this._peer.id + "," + this._chord._localNode._peer.id + "," + this._localNode + "] ", msg, arguments.length > 1 ? Array.prototype.slice.call(arguments, 1) : "");
+        console.log("[" + this._peer.id.toString() + "," + this._chord._localNode._peer.id.toString() + "," + this._localNode + "] ", msg, arguments.length > 1 ? Array.prototype.slice.call(arguments, 1) : "");
     },
 
     _find_successor: function(id, seqnr) {
@@ -263,7 +267,8 @@ ChordNode.prototype = {
         this._chord.route(new BigInteger(msg.to), msg.payload, function(err) {
             var resp = {
                 type: self.message_types.ACK,
-                seqnr: msg.seqnr
+                seqnr: msg.seqnr,
+                to: msg.from
             };
             if (err) {
                 resp.type = self.message_types.ERROR;
@@ -280,16 +285,17 @@ ChordNode.prototype = {
     },
 
     _send: function(msg) {
-        msg.from = this._chord.id().toString();
+        msg.from = this._chord.id.toString();
         this._peer.dataChannel.send(JSON.stringify(msg));
     },
 
-    _onmessage: function(rawMsg, sender) {
-        this.log("Got message from " + sender, rawMsg);
+    _onmessage: function(rawMsg) {
         var msg = JSON.parse(rawMsg.data);
+        this.log("got message", msg);
         var cb = this._pending[msg.seqnr];
         // if we find a callback this message is a response to a request of ours
         if (typeof(cb) === 'function') {
+            this.log("message is a response");
             this._handle_response(msg, cb);
         } else {
             this._handle_request(msg);
