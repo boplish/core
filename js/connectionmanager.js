@@ -142,15 +142,19 @@ ConnectionManager.prototype = {
     },
 
     _onMessage: function(msg) {
-        switch (msg.payload.type) {
+        if (msg.payload.type !== 'signaling-protocol') {
+            console.log('ConnectionManager: Discarding JSEP message because the type is unknown: ' + JSON.stringify(msg));
+            return;
+        }
+        switch (msg.payload.payload.type) {
             case 'offer':
-                this._onReceiveOffer(msg.payload, msg.from);
+                this._onReceiveOffer(msg.payload.payload.offer, msg.payload.from);
                 break;
             case 'answer':
-                this._onReceiveAnswer(msg.payload, msg.from);
+                this._onReceiveAnswer(msg.payload.payload.answer, msg.payload.from);
                 break;
             case 'denied':
-                this._onOfferDenied(msg.payload, msg.from);
+                this._onOfferDenied(msg.payload.payload, msg.payload.from);
                 break;
             default:
                 console.log('ConnectionManager: Discarding JSEP message because the type is unknown: ' + JSON.stringify(msg));
@@ -193,8 +197,11 @@ ConnectionManager.prototype = {
         // if we're already connected or are already processing an offer from
         // this peer, deny this offer
         if (this._connections[from] !== undefined || this._pending[from] !== undefined) {
-            this._router.route(from, 'signaling-protocol', {
-                type: 'denied'
+            this._router.route(from, {
+                type: 'signaling-protocol',
+                payload: {
+                    type: 'denied'
+                }
             });
         }
 
@@ -276,7 +283,15 @@ ConnectionManager.prototype = {
                 // spec specifies that a null candidate means that the ice gathering is complete
                 pc.onicecandidate = function() {};
                 pc.createAnswer(function(answer) {
-                    this._router.route(to, 'signaling-protocol', answer);
+                    this._router.route(to, {
+                        type: 'signaling-protocol',
+                        to: to,
+                        from: this._router.id(),
+                        payload: {
+                            type: "answer",
+                            answer: answer
+                        }
+                    });
                 }.bind(this), this._onCreateAnswerError.bind(this));
             }
         }.bind(this);

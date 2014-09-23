@@ -152,7 +152,7 @@ MockSignalingChannel.prototype.send = function(data) {
 };
 
 function MockRouter(id, signalingChannel, connectionManager) {
-    this.id = id;
+    this._id = id;
     this.signalingChannel = signalingChannel;
     this.signalingChannel.onmessage = this.onmessage.bind(this);
     this.callbacks = [];
@@ -160,7 +160,7 @@ function MockRouter(id, signalingChannel, connectionManager) {
 
 MockRouter.prototype = {
     id: function() {
-        return this.id;
+        return this._id;
     },
     addPeer: function(peer) {
         this._peer = peer;
@@ -168,17 +168,17 @@ MockRouter.prototype = {
     registerDeliveryCallback: function(type, cb) {
         this.callbacks[type] = cb;
     },
-    route: function(to, type, payload) {
+    route: function(to, payload) {
         this.signalingChannel.send({
-            from: this.id,
-            to: to,
-            type: type,
+            type: "ROUTE",
+            to: to.toString(),
+            from: this.id(),
             payload: payload
         });
     },
     onmessage: function(msg) {
         var packet = JSON.parse(msg.data);
-        this.callbacks[packet.type](packet.payload, packet.from);
+        this.callbacks[packet.payload.type](packet);
     },
 };
 

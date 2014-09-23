@@ -88,15 +88,17 @@ describe('ConnectionManager', function() {
         it('should connect two peers on bootstrap', function() {
             var sigch1 = {
                 send: function(data) {
-                    data.should.have.property('from', router1.id);
-                    if (data.type === "signaling-protocol" && data.payload.type === "offer") {
+                    data.should.have.property('from', router1.id());
+                    if (data.payload.type === "signaling-protocol" && data.payload.payload.type === "offer") {
                         sigch1.onmessage({
                             data: JSON.stringify({
-                                to: router1.id,
-                                from: router2.id,
-                                type: "signaling-protocol",
+                                to: router1.id(),
+                                from: router2.id(),
                                 payload: {
-                                    type: "denied"
+                                    type: "signaling-protocol",
+                                    payload: {
+                                        type: "denied"
+                                    }
                                 }
                             })
                         });
@@ -109,7 +111,7 @@ describe('ConnectionManager', function() {
             };
             var sigch2 = {
                 send: function(data) {
-                    data.should.have.property('from', router2.id);
+                    data.should.have.property('from', router2.id());
                     data.should.have.property('to', '*');
                     sigch1.onmessage({
                         data: JSON.stringify(data)
@@ -129,8 +131,8 @@ describe('ConnectionManager', function() {
             ev.channel.onopen();
             cm2._bootstrap.dc.onopen();
             router1.should.have.property("_peer");
-            router1._peer.should.have.property("id").equal(router2.id);
-            router2._peer.should.have.property("id").equal(router1.id);
+            router1._peer.should.have.property("id").equal(router2.id());
+            router2._peer.should.have.property("id").equal(router1.id());
         });
     });
 });
