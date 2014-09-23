@@ -152,16 +152,13 @@ MockSignalingChannel.prototype.send = function(data) {
 };
 
 function MockRouter(id, signalingChannel, connectionManager) {
-    this._id = id;
+    this.id = id;
     this.signalingChannel = signalingChannel;
     this.signalingChannel.onmessage = this.onmessage.bind(this);
     this.callbacks = [];
 }
 
 MockRouter.prototype = {
-    id: function() {
-        return this._id;
-    },
     addPeer: function(peer) {
         this._peer = peer;
     },
@@ -172,7 +169,7 @@ MockRouter.prototype = {
         this.signalingChannel.send({
             type: "ROUTE",
             to: to.toString(),
-            from: this.id(),
+            from: this.id,
             payload: payload
         });
     },

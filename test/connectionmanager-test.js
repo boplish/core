@@ -5,6 +5,7 @@ require('../js/third_party/sha1.js');
 var Mocks = require('./adapter-mock.js');
 var sinon = require('sinon');
 var ConnectionManager = require('../js/connectionmanager.js');
+var BigInteger = require('../js/third_party/BigInteger.js');
 
 var RouterAPI = {
     registerDeliveryCallback: function() {},
@@ -88,12 +89,12 @@ describe('ConnectionManager', function() {
         it('should connect two peers on bootstrap', function() {
             var sigch1 = {
                 send: function(data) {
-                    data.should.have.property('from', router1.id());
+                    data.should.have.property('from', router1.id);
                     if (data.payload.type === "signaling-protocol" && data.payload.payload.type === "offer") {
                         sigch1.onmessage({
                             data: JSON.stringify({
-                                to: router1.id(),
-                                from: router2.id(),
+                                to: router1.id,
+                                from: router2.id,
                                 payload: {
                                     type: "signaling-protocol",
                                     payload: {
@@ -111,7 +112,7 @@ describe('ConnectionManager', function() {
             };
             var sigch2 = {
                 send: function(data) {
-                    data.should.have.property('from', router2.id());
+                    data.should.have.property('from', router2.id);
                     data.should.have.property('to', '*');
                     sigch1.onmessage({
                         data: JSON.stringify(data)
@@ -119,9 +120,9 @@ describe('ConnectionManager', function() {
                 },
             };
             var cm1 = new ConnectionManager();
-            var router1 = new Mocks.MockRouter(1, sigch1, cm1);
+            var router1 = new Mocks.MockRouter(new BigInteger(1), sigch1, cm1);
             var cm2 = new ConnectionManager();
-            var router2 = new Mocks.MockRouter(2, sigch2, cm2);
+            var router2 = new Mocks.MockRouter(new BigInteger(2), sigch2, cm2);
             cm1.bootstrap(router1, function() {}, function() {});
             cm2.bootstrap(router2, function() {}, function() {});
             var ev = {
@@ -131,8 +132,9 @@ describe('ConnectionManager', function() {
             ev.channel.onopen();
             cm2._bootstrap.dc.onopen();
             router1.should.have.property("_peer");
-            router1._peer.should.have.property("id").equal(router2.id());
-            router2._peer.should.have.property("id").equal(router1.id());
+            router1._peer.should.have.property("id");
+            assert.ok(router1._peer.id.equals(router2.id));
+            assert.ok(router2._peer.id.equals(router1.id));
         });
     });
 });

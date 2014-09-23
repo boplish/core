@@ -1,6 +1,7 @@
 /** @fileOverview Mid-level connection broking and signaling functionality. */
 
 var Peer = require('./peer.js');
+var BigInteger = require('./third_party/BigInteger.js');
 
 /**
  * @constructor
@@ -121,7 +122,7 @@ ConnectionManager.prototype = {
                     this._router.route(to, {
                         type: 'signaling-protocol',
                         to: to,
-                        from: this._router.id(),
+                        from: this._router.id.toString(),
                         payload: {
                             type: "offer",
                             offer: offer
@@ -148,13 +149,13 @@ ConnectionManager.prototype = {
         }
         switch (msg.payload.payload.type) {
             case 'offer':
-                this._onReceiveOffer(msg.payload.payload.offer, msg.payload.from);
+                this._onReceiveOffer(msg.payload.payload.offer, new BigInteger(msg.payload.from));
                 break;
             case 'answer':
-                this._onReceiveAnswer(msg.payload.payload.answer, msg.payload.from);
+                this._onReceiveAnswer(msg.payload.payload.answer, new BigInteger(msg.payload.from));
                 break;
             case 'denied':
-                this._onOfferDenied(msg.payload.payload, msg.payload.from);
+                this._onOfferDenied(msg.payload.payload, new BigInteger(msg.payload.from));
                 break;
             default:
                 console.log('ConnectionManager: Discarding JSEP message because the type is unknown: ' + JSON.stringify(msg));
@@ -286,7 +287,7 @@ ConnectionManager.prototype = {
                     this._router.route(to, {
                         type: 'signaling-protocol',
                         to: to,
-                        from: this._router.id(),
+                        from: this._router.id.toString(),
                         payload: {
                             type: "answer",
                             answer: answer
