@@ -1,11 +1,13 @@
+// vim: ft=javascript
+
 var ping_message = {
     type: "ROUTE",
     to: "12345",
     from: "67890",
     payload: {
+        type: "pingpong",
         to: "max@example.com",
         from: "chris@example.org",
-        type: "pingpong",
         payload: {
             type: "ping",
             timestamp: 12345

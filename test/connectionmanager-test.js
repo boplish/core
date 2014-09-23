@@ -8,7 +8,8 @@ var ConnectionManager = require('../js/connectionmanager.js');
 
 var RouterAPI = {
     registerDeliveryCallback: function() {},
-    route: function() {}
+    route: function() {},
+    id: function() {}
 };
 
 describe('ConnectionManager', function() {
@@ -43,12 +44,16 @@ describe('ConnectionManager', function() {
         });
         it('should create the correct offer packet', function(done) {
             var router = {
+                id: function() {
+                    return 1;
+                },
                 registerDeliveryCallback: function() {},
-                route: function(to, type, msg) {
+                route: function(to, msg) {
                     to.should.equal('*');
-                    type.should.equal('signaling-protocol');
-                    msg.should.have.property('type', 'offer');
-                    msg.should.have.property('sdp');
+                    msg.type.should.equal('signaling-protocol');
+                    msg.should.have.property('payload');
+                    msg.payload.should.have.property('type', 'offer');
+                    msg.payload.offer.should.have.property('sdp');
                     done();
                 }
             };
@@ -56,6 +61,9 @@ describe('ConnectionManager', function() {
         });
         it('should set the correct state', function(done) {
             var router = {
+                id: function() {
+                    return 1;
+                },
                 registerDeliveryCallback: function() {},
                 route: function() {
                     cm.should.have.property('_state', 'bootstrapping');
@@ -66,6 +74,9 @@ describe('ConnectionManager', function() {
         });
         it('should not allow being called twice', function(done) {
             var router = {
+                id: function() {
+                    return 1;
+                },
                 registerDeliveryCallback: function() {},
                 route: function() {},
             };

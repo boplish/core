@@ -118,7 +118,15 @@ ConnectionManager.prototype = {
                 // spec specifies that a null candidate means that the ice gathering is complete
                 pc.onicecandidate = function() {};
                 pc.createOffer(function(offer) {
-                    this._router.route(to, 'signaling-protocol', offer, function(err) {
+                    this._router.route(to, {
+                        type: 'signaling-protocol',
+                        to: to,
+                        from: this._router.id(),
+                        payload: {
+                            type: "offer",
+                            offer: offer
+                        }
+                    }, function(err) {
                         console.log(err);
                     });
                 }.bind(this), this._onCreateOfferError.bind(this, errorCallback));
@@ -133,16 +141,16 @@ ConnectionManager.prototype = {
         errorCallback(error);
     },
 
-    _onMessage: function(msg, from) {
-        switch (msg.type) {
+    _onMessage: function(msg) {
+        switch (msg.payload.type) {
             case 'offer':
-                this._onReceiveOffer(msg, from);
+                this._onReceiveOffer(msg.payload, msg.from);
                 break;
             case 'answer':
-                this._onReceiveAnswer(msg, from);
+                this._onReceiveAnswer(msg.payload, msg.from);
                 break;
             case 'denied':
-                this._onOfferDenied(msg, from);
+                this._onOfferDenied(msg.payload, msg.from);
                 break;
             default:
                 console.log('ConnectionManager: Discarding JSEP message because the type is unknown: ' + JSON.stringify(msg));

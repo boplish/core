@@ -59,16 +59,21 @@ function debug(chord, id, bootstrapId, err, res) {
             b: Math.random()
         }, function(err) {
             chords[1].get(k, function(err2, v) {
-                console.log("//{" + k + ": " + v + "}");
+                console.log("//{" + k + ": " + JSON.stringify(v) + "}");
             });
         });
         var to = chords[3].id();
-        chords[3].registerDeliveryCallback("test", function(msg, from) {
-            console.log(msg, from);
+        chords[3].registerDeliveryCallback("signaling", function(msg) {
+            console.log("Incoming 'signaling' message", msg);
         });
-        chords[9].route(to, "test", {
-            a: 1,
-            b: 2
+        chords[9].route(to, {
+            type: "signaling",
+            to: 1,
+            from: 2,
+            payload: {
+                type: "offer",
+                offer: "OFFER SDP"
+            }
         }, function(err) {
             if (err) {
                 console.log("Error routing to", to.toString(), err);

@@ -228,22 +228,22 @@ Chord.prototype.remove = function(key) {
     // TODO: implement
 };
 
-Chord.prototype.route = function(to, type, payload, callback) {
+Chord.prototype.route = function(to, message, callback) {
     if (to === "*") {
-        this._localNode.route(to, type, payload, callback);
+        this._localNode.route(to, message, callback);
     } else if (this.id().equals(to)) {
         try {
-            this._messageCallbacks[type](payload, payload.from);
+            this._messageCallbacks[message.type](message);
             callback(null);
         } catch (e) {
-            this.log('Unable to handle message of type ' + type + ' from ' + payload.from + ' because no callback is registered: ' + e);
-            callback("No application for protocol '" + type + "'");
+            this.log('Unable to handle message of type ' + message.type + ' because no callback is registered: ' + e);
+            callback("No application for protocol '" + message.type + "'");
         }
     } else if (Range.inOpenInterval(to, this._localNode.predecessor_id(), this.id())) {
         callback("No peer found with with ID " + to.toString());
     } else {
         this._localNode.successor(function(err, successorNode) {
-            successorNode.route(to, type, payload, callback);
+            successorNode.route(to, message, callback);
         });
     }
 };

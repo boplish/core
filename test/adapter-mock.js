@@ -159,6 +159,9 @@ function MockRouter(id, signalingChannel, connectionManager) {
 }
 
 MockRouter.prototype = {
+    id: function() {
+        return this.id;
+    },
     addPeer: function(peer) {
         this._peer = peer;
     },
