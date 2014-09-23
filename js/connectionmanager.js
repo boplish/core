@@ -143,19 +143,19 @@ ConnectionManager.prototype = {
     },
 
     _onMessage: function(msg) {
-        if (msg.payload.type !== 'signaling-protocol') {
+        if (msg.type !== 'signaling-protocol') {
             console.log('ConnectionManager: Discarding JSEP message because the type is unknown: ' + JSON.stringify(msg));
             return;
         }
-        switch (msg.payload.payload.type) {
+        switch (msg.payload.type) {
             case 'offer':
-                this._onReceiveOffer(msg.payload.payload.offer, new BigInteger(msg.payload.from));
+                this._onReceiveOffer(msg.payload.offer, new BigInteger(msg.from));
                 break;
             case 'answer':
-                this._onReceiveAnswer(msg.payload.payload.answer, new BigInteger(msg.payload.from));
+                this._onReceiveAnswer(msg.payload.answer, new BigInteger(msg.from));
                 break;
             case 'denied':
-                this._onOfferDenied(msg.payload.payload, new BigInteger(msg.payload.from));
+                this._onOfferDenied(msg.payload, new BigInteger(msg.from));
                 break;
             default:
                 console.log('ConnectionManager: Discarding JSEP message because the type is unknown: ' + JSON.stringify(msg));

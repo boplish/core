@@ -175,7 +175,7 @@ MockRouter.prototype = {
     },
     onmessage: function(msg) {
         var packet = JSON.parse(msg.data);
-        this.callbacks[packet.payload.type](packet);
+        this.callbacks[packet.payload.type](packet.payload);
     },
 };
 
