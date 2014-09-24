@@ -106,7 +106,7 @@ Router.prototype = {
         this.forward({
             to: to,
             from: this.id.toString(),
-            type: 'route',
+            type: 'ROUTE',
             payload: payload
         });
     },
@@ -147,11 +147,22 @@ Router.prototype = {
         this.forward({
             to: peer.toString(),
             from: this.id.toString(),
-            type: 'get-request',
+            type: 'GET',
             payload: {
+                type: 'request',
                 hash: hash.toString()
             }
         });
+    },
+
+    _handleGET: function(msg) {
+        if (msg.payload.type === 'request') {
+            this._handleGetRequest(msg);
+        } else if (msg.payload.type === 'response') {
+            this._handleGetResponse(msg);
+        } else {
+            console.log('received invalid GET message', msg);
+        }
     },
 
     _handleGetRequest: function(msg) {
@@ -160,8 +171,9 @@ Router.prototype = {
             this.forward({
                 to: msg.from,
                 from: this.id.toString(),
-                type: 'get-response',
+                type: 'GET',
                 payload: {
+                    type: 'response',
                     hash: msg.payload.hash,
                     val: val
                 }
@@ -184,12 +196,23 @@ Router.prototype = {
         this.forward({
             to: peer.toString(),
             from: this.id.toString(),
-            type: 'put-request',
+            type: 'PUT',
             payload: {
+                type: 'request',
                 hash: hash.toString(),
                 val: val
             }
         });
+    },
+
+    _handlePUT: function(msg) {
+        if (msg.payload.type === 'request') {
+            this._handlePutRequest(msg);
+        } else if (msg.payload.type === 'response') {
+            this._handlePutResponse(msg);
+        } else {
+            console.log('received invalid PUT message', msg);
+        }
     },
 
     _handlePutRequest: function(msg) {
@@ -198,8 +221,9 @@ Router.prototype = {
             this.forward({
                 to: msg.from,
                 from: this.id.toString(),
-                type: 'put-response',
+                type: 'PUT',
                 payload: {
+                    type: 'response',
                     hash: msg.payload.hash
                 }
             });
@@ -235,7 +259,7 @@ Router.prototype = {
      */
     deliver: function(msg) {
         switch (msg.type) {
-            case 'route':
+            case 'ROUTE':
                 try {
                     this._messageCallbacks[msg.payload.type](msg.payload);
                 } catch (e) {
@@ -243,17 +267,15 @@ Router.prototype = {
                     console.log('Unable to handle message of type ' + msg.payload.type + ' from ' + msg.payload.from + ' because no callback is registered: ' + e);
                 }
                 break;
-            case 'get-request':
-                this._handleGetRequest(msg);
+            case 'ACK':
+                // silently discard ACK messages as they 
+                // are only used for the Chord implementation
                 break;
-            case 'get-response':
-                this._handleGetResponse(msg);
+            case 'GET':
+                this._handleGET(msg);
                 break;
-            case 'put-request':
-                this._handlePutRequest(msg);
-                break;
-            case 'put-response':
-                this._handlePutResponse(msg);
+            case 'PUT':
+                this._handlePUT(msg);
                 break;
             default:
                 console.log('Discarding message', msg, 'because the type is unknown');
