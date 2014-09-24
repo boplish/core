@@ -170,7 +170,7 @@ ConnectionManager.prototype = {
                 this._router.addPeer(peer, function(err) {
                     this._bootstrap.onsuccess();
                     this._bootstrap = null;
-                });
+                }.bind(this));
             }.bind(this);
         } else {
             var pending = this._pending[from];
