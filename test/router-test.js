@@ -90,7 +90,7 @@ describe('Router', function() {
                 sinon.assert.calledWith(spy, {
                     from: router.id,
                     to: router.id,
-                    type: 'route',
+                    type: 'ROUTE',
                     payload: testMsg
                 });
                 done();
@@ -138,7 +138,7 @@ describe('Router', function() {
                 sinon.assert.calledWith(spy, {
                     from: router.id,
                     to: router.id,
-                    type: 'route',
+                    type: 'ROUTE',
                     payload: testMsg
                 });
                 done();
@@ -161,7 +161,7 @@ describe('Router', function() {
                     from: router.id,
                     to: router.id,
                     payload: testMsg1,
-                    type: 'route'
+                    type: 'ROUTE'
                 });
             });
             router.registerDeliveryCallback('discovery', function(msg) {
@@ -169,7 +169,7 @@ describe('Router', function() {
                 sinon.assert.calledWith(spy, {
                     from: router.id,
                     to: router.id,
-                    type: 'route',
+                    type: 'ROUTE',
                     payload: testMsg2
                 });
                 done();
@@ -180,9 +180,9 @@ describe('Router', function() {
     });
     describe('#neighbor discovery', function() {
         it('should call the answer callback when an discovery answer is received', function() {
-            var stub = sinon.stub(router._messageCallbacks, 'discovery');
+            var stub = sinon.stub(router._messageCallbacks, 'discovery-protocol');
             var fakeDiscoveryAnswerMessage = {
-                type: 'discovery',
+                type: 'discovery-protocol',
                 payload: {
                     type: 'answer',
                     payload: {
@@ -196,9 +196,9 @@ describe('Router', function() {
             sinon.assert.calledWith(stub, fakeDiscoveryAnswerMessage);
         });
         it('should call the request callback when an request message is received', function() {
-            var stub = sinon.stub(router._messageCallbacks, 'discovery');
+            var stub = sinon.stub(router._messageCallbacks, 'discovery-protocol');
             var testMsg = {
-                type: 'discovery',
+                type: 'discovery-protocol',
                 payload: {
                     type: 'request'
                 }
