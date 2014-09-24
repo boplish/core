@@ -27,7 +27,7 @@ var Router = function(id, fallbackSignaling, connectionManager) {
     this._monitorCallback = null;
     this._pendingPutRequests = {};
     this._pendingGetRequests = {};
-    this.registerDeliveryCallback('discovery', this._onDiscoveryMessage.bind(this));
+    this.registerDeliveryCallback('discovery-protocol', this._onDiscoveryMessage.bind(this));
 
     return this;
 };
@@ -100,8 +100,11 @@ Router.prototype = {
      * @param payload the message payload
      */
     route: function(to, payload) {
+        if (typeof(to) !== 'string') {
+            to = to.toString();
+        }
         this.forward({
-            to: to.toString(),
+            to: to,
             from: this.id.toString(),
             type: 'route',
             payload: payload
@@ -291,7 +294,7 @@ Router.prototype = {
      */
     _discoverNeighbours: function(peer) {
         this.route(peer.id, {
-            type: 'discovery',
+            type: 'discovery-protocol',
             payload: {
                 type: 'request',
                 from: this.id.toString()
@@ -324,10 +327,14 @@ Router.prototype = {
         var i, ids = msg.payload.ids;
         for (i = 0; i < ids.length; i++) {
             if (ids[i] !== this.id.toString()) {
-                this._connectionManager.connect(ids[i], function(err) {
-                    console.log('Error connecting to', ids[i], ':', err);
-                });
+                this._connectionManager.connect(ids[i], this._processDiscoveryCallback.bind(this, ids[i]));
             }
+        }
+    },
+
+    _processDiscoveryCallback: function(err, id) {
+        if (err) {
+            console.log('Error connecting to', id, ':', err);
         }
     },
 
@@ -347,7 +354,7 @@ Router.prototype = {
             }
         }
         this.route(msg.payload.from, {
-            type: 'discovery',
+            type: 'discovery-protocol',
             payload: {
                 type: 'response',
                 from: this.id.toString(),
