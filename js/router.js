@@ -47,9 +47,6 @@ Router.prototype = {
      */
     addPeer: function(peer) {
         this._peerTable[peer.id] = peer;
-        setInterval(function() {
-            console.log(Object.keys(this._peerTable));
-        }.bind(this), 2000);
         peer.dataChannel.onmessage = this.onmessage.bind(this);
         peer.peerConnection.onclosedconnection = this.removePeer.bind(this, peer);
         if (Object.keys(this._peerTable).length === 1) {
