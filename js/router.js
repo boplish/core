@@ -45,13 +45,16 @@ Router.prototype = {
      * @param peer {Peer} The peer to add.
      * @todo add test for onclosedconnection behaviour
      */
-    addPeer: function(peer) {
+    addPeer: function(peer, cb) {
         this._peerTable[peer.id] = peer;
         peer.dataChannel.onmessage = this.onmessage.bind(this);
         peer.peerConnection.onclosedconnection = this.removePeer.bind(this, peer);
         if (Object.keys(this._peerTable).length === 1) {
             // ask first peer for its neighbours
             this._discoverNeighbours(peer);
+        }
+        if (typeof(cb) === 'function') {
+            cb();
         }
     },
 
@@ -320,8 +323,10 @@ Router.prototype = {
         //console.log('connecting to', msg.payload.ids)
         var i, ids = msg.payload.ids;
         for (i = 0; i < ids.length; i++) {
-            if (ids[i] !== this.id) {
-                this._connectionManager.connect(ids[i]);
+            if (ids[i] !== this.id.toString()) {
+                this._connectionManager.connect(ids[i], function(err) {
+                    console.log('Error connecting to', ids[i], ':', err);
+                });
             }
         }
     },
