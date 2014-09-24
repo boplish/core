@@ -69,7 +69,7 @@ module.exports = function(grunt) {
                     'dist/boplish-browserified-debug.js': ['js/**/*.js']
                 },
                 options: {
-                    exclude: ['js/bopclient.js', 'js/chord/test.js'],
+                    exclude: ['js/application.js', 'js/chord/test.js'],
                     browserifyOptions: {
                         'noParse': 'js/adapter.js'
                     }
@@ -81,7 +81,7 @@ module.exports = function(grunt) {
                 },
                 options: {
                     transform: ['uglifyify'],
-                    exclude: ['js/bopclient.js'],
+                    exclude: ['js/application.js'],
                     browserifyOptions: {
                         'noParse': 'js/adapter.js'
                     }
