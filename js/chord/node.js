@@ -58,10 +58,11 @@ ChordNode.prototype = {
 
     successor: function(cb) {
         var self = this;
-        if (self._successor.hasOwnPropery && self._successor.hasOwnProperty("_peer")) {
+        if (self._successor.hasOwnProperty && self._successor.hasOwnProperty("_peer")) {
             cb(null, self._successor);
             return;
         } else {
+            self.log("connecting to successor");
             self._chord._connectionManager.connect(self.successor_id(), function(err, successorPeer) {
                 if (err) {
                     throw err;
@@ -78,6 +79,7 @@ ChordNode.prototype = {
             type: this.message_types.FIND_SUCCESSOR,
             id: id.toString()
         }, function(err, msg) {
+            self.log(JSON.stringify(msg));
             cb(null, new BigInteger(msg.successor));
         });
     },
@@ -150,6 +152,7 @@ ChordNode.prototype = {
 
     get: function(key, callback) {
         var self = this;
+        self.log("sending GET request");
         this._send_request({
             type: this.message_types.GET,
             key: key.toString()
@@ -185,7 +188,12 @@ ChordNode.prototype = {
         if (!this.debug) {
             return;
         }
-        console.log("[" + this._peer.id.toString() + "," + this._chord._localNode._peer.id.toString() + "," + this._localNode + "] ", msg, arguments.length > 1 ? Array.prototype.slice.call(arguments, 1) : "");
+        var prelude = "[" + this._peer.id.toString() + "," + this._chord._localNode._peer.id.toString() + "," + this._localNode + "] ";
+        if (arguments.length > 1) {
+            console.log([prelude, msg].concat(Array.prototype.slice.call(arguments, 1)).join(" "));
+        } else {
+            console.log([prelude, msg].join(" "));
+        }
     },
 
     _find_successor: function(id, seqnr) {
@@ -223,6 +231,7 @@ ChordNode.prototype = {
 
     _update_successor: function(id, seqnr) {
         var self = this;
+        self.log("updating my successor to " + id.toString());
         self._chord._localNode._successor = id;
         self._send({
             type: self.message_types.ACK,
@@ -291,11 +300,23 @@ ChordNode.prototype = {
 
     _onmessage: function(rawMsg) {
         var msg = JSON.parse(rawMsg.data);
-        this.log("got message", msg);
         var cb = this._pending[msg.seqnr];
+        var arr = [msg.type];
+        if (msg.payload && msg.payload.type) {
+            arr.push(msg.payload.type);
+            if (msg.payload.from) {
+                arr.push(msg.payload.from);
+            }
+            if (msg.payload.seqnr) {
+                arr.push(msg.payload.seqnr);
+            }
+            if (msg.payload.payload && msg.payload.payload.type) {
+                arr.push(msg.payload.payload.type);
+            }
+        }
+        this.log("incoming message: " + arr.join(", "));
         // if we find a callback this message is a response to a request of ours
         if (typeof(cb) === 'function') {
-            this.log("message is a response");
             this._handle_response(msg, cb);
         } else {
             this._handle_request(msg);

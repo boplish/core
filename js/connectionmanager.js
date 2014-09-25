@@ -14,7 +14,6 @@ var ConnectionManager = function() {
     }
     this._bootstrap = null;
     this._pending = {};
-    this._connections = {};
     this._pcoptions = {
         iceServers: [{
             "url": "stun:stun.l.google.com:19302"
@@ -91,21 +90,22 @@ ConnectionManager.prototype = {
             callback('Invalid state');
             return;
         }
-        if (this._pending[to] !== undefined) {
-            callback('Already connecting');
-        }
         var pc = new RTCPeerConnection(this._pcoptions);
         var dc = pc.createDataChannel(null, {});
-        this._pending[to] = {
+        var seqnr = Math.floor(Math.random() * 1000000);
+        this._pending[seqnr] = {
+            seqnr: seqnr,
             pc: pc,
             dc: dc,
             callback: callback,
         };
-        pc.createOffer(this._onCreateOfferSuccess.bind(this, pc, to, this._pending[to],
+        console.log("connecting to " + to.toString() + " with seqnr " + seqnr);
+        pc.createOffer(this._onCreateOfferSuccess.bind(this, pc, to, this._pending[seqnr],
             callback), this._onCreateOfferError.bind(this, callback));
     },
 
     _onCreateOfferSuccess: function(pc, to, pendingOffer, callback, sessionDesc) {
+        console.log("created offer for " + to.toString() + " with seqnr " + pendingOffer.seqnr);
         if (pendingOffer.drop) {
             return;
         }
@@ -114,9 +114,9 @@ ConnectionManager.prototype = {
                 // spec specifies that a null candidate means that the ice gathering is complete
                 pc.onicecandidate = function() {};
                 pc.createOffer(function(offer) {
-                    console.log("routing offer from " + this._router.id.toString());
                     this._router.route(to, {
                         type: 'signaling-protocol',
+                        seqnr: pendingOffer.seqnr,
                         to: to.toString(),
                         from: this._router.id.toString(),
                         payload: {
@@ -124,13 +124,16 @@ ConnectionManager.prototype = {
                             offer: offer
                         }
                     }, function(err) {
-                        console.log(err);
+                        if (err) {
+                            console.log(err);
+                        }
                     });
                 }.bind(this), this._onCreateOfferError.bind(this, callback));
             }
         }.bind(this);
-        pendingOffer.offerId = this.utils.findSessionId(sessionDesc.sdp);
-        pc.setLocalDescription(sessionDesc, function() {});
+        pc.setLocalDescription(sessionDesc, function() {}, function(err) {
+            console.error("Error setting local description", err);
+        });
     },
 
     _onCreateOfferError: function(callback, error) {
@@ -146,10 +149,10 @@ ConnectionManager.prototype = {
 
         switch (msg.payload.type) {
             case 'offer':
-                this._onReceiveOffer(msg.payload.offer, new BigInteger(msg.from));
+                this._onReceiveOffer(msg, new BigInteger(msg.from));
                 break;
             case 'answer':
-                this._onReceiveAnswer(msg.payload.answer, new BigInteger(msg.from));
+                this._onReceiveAnswer(msg, new BigInteger(msg.from));
                 break;
             case 'denied':
                 this._onOfferDenied(msg.payload, msg.from);
@@ -159,25 +162,34 @@ ConnectionManager.prototype = {
         }
     },
 
-    _onReceiveAnswer: function(desc, from) {
+    _onReceiveAnswer: function(message, from) {
+        var desc = message.payload.answer;
         if (this._state === 'bootstrapping') {
             // TODO(max): check if we actually have a pending PC and ``drop'' is not set (glare).
-            this._bootstrap.pc.setRemoteDescription(new RTCSessionDescription(desc), function() {});
+            this._bootstrap.pc.setRemoteDescription(new RTCSessionDescription(desc), function() {}, function(err) {
+                console.error("Error setting remote description", err);
+            });
             this._bootstrap.dc.onopen = function(ev) {
                 // nodejs wrtc-library does not include a channel reference in `ev.target`
                 this._state = 'ready';
                 var peer = new Peer(from, this._bootstrap.pc, this._bootstrap.dc);
                 this._router.addPeer(peer, function(err) {
-                    this._bootstrap.onsuccess();
+                    if (err) {
+                        this._bootstrap.onerror(err);
+                    } else {
+                        this._bootstrap.onsuccess();
+                    }
                     this._bootstrap = null;
                 }.bind(this));
             }.bind(this);
         } else {
-            var pending = this._pending[from];
+            var pending = this._pending[message.seqnr];
             if (pending === undefined) {
                 return; // we haven't offered to this node, silently discard
             }
-            pending.pc.setRemoteDescription(new RTCSessionDescription(desc), function() {});
+            pending.pc.setRemoteDescription(new RTCSessionDescription(desc), function() {}, function(err) {
+                console.error("Error setting remote description", err);
+            });
             pending.dc.onopen = function(ev) {
                 // nodejs wrtc-library does not include a channel reference in `ev.target`
                 var peer = new Peer(from, pending.pc, pending.dc);
@@ -185,32 +197,16 @@ ConnectionManager.prototype = {
                     if (typeof(pending.callback) === 'function') {
                         // TODO(max): would it make sense to pass the remote peer's
                         // ID to the handler?
-                        pending.callback();
+                        pending.callback(err, peer);
                     }
-                    delete this._pending[from];
-                    this._connections[from] = peer;
+                    delete this._pending[message.seqnr];
                 }.bind(this));
             }.bind(this);
         }
     },
 
-    _onReceiveOffer: function(desc, from) {
-        console.log("handling offer from " + from);
-        // if we're already connected or are already processing an offer from
-        // this peer, deny this offer
-        if (this._connections[from] !== undefined || this._pending[from] !== undefined) {
-            this._router.route(from, {
-                type: 'signaling-protocol',
-                to: from.toString(),
-                from: this._router.id.toString(),
-                payload: {
-                    type: 'denied'
-                }
-            }, function(err) {
-                console.log(err);
-            });
-        }
-
+    _onReceiveOffer: function(message, from) {
+        var desc = message.payload.offer;
         var offerId = this.utils.findSessionId(desc.sdp);
 
         if (this._state === 'bootstrapping') {
@@ -233,58 +229,52 @@ ConnectionManager.prototype = {
                 // silently discard this offer
                 return;
             }
-            this._bootstrap.pc.setRemoteDescription(new RTCSessionDescription(desc), function() {});
+            this._bootstrap.pc.setRemoteDescription(new RTCSessionDescription(desc), function() {}, function(err) {
+                console.error("Error setting remote description", err);
+            });
             this._bootstrap.pc.ondatachannel = function(ev) {
                 ev.channel.onopen = function(ev2) {
                     // nodejs wrtc-library does not include a channel reference in `ev2.target`
                     this._state = 'ready';
                     var peer = new Peer(from, this._bootstrap.pc, ev.channel);
                     this._router.addPeer(peer, function(err) {
-                        this._bootstrap.onsuccess();
+                        if (err) {
+                            this._bootstrap.onerror(err);
+                        } else {
+                            this._bootstrap.onsuccess();
+                        }
                         this._bootstrap = null;
-                        this._connections[from] = peer;
                     }.bind(this));
                 }.bind(this);
             }.bind(this);
-            this._bootstrap.pc.createAnswer(this._onCreateAnswerSuccess.bind(this, from, this._bootstrap.pc), this._onCreateAnswerError.bind(this));
+            this._bootstrap.pc.createAnswer(this._onCreateAnswerSuccess.bind(this, from, this._bootstrap.pc, null), this._onCreateAnswerError.bind(this));
         } else {
-            var pendingOffer = this._pending[from];
-            if (pendingOffer !== undefined) {
-                // handle glare
-                if (offerId > pendingOffer.offerId) {
-                    // discard our offer and accept this one
-                    newPendingOffer = {
-                        callback: pendingOffer.callback,
-                    };
-                    pendingOffer = newPendingOffer;
-                    delete this._pending[from];
-                } else {
-                    // silently discard this offer
-                    return;
-                }
-            }
             var pc = new RTCPeerConnection(this._pcoptions);
-            pc.setRemoteDescription(new RTCSessionDescription(desc), function() {});
-            this._pending[from] = pendingOffer || {};
-            this._pending[from].pc = pc;
+            pc.setRemoteDescription(new RTCSessionDescription(desc), function() {}, function(err) {
+                console.error("could not set remote description", err);
+            });
+            if (this._pending[message.seqnr]) {
+                this._pending[message.seqnr].pc = pc;
+            }
             pc.ondatachannel = function(ev) {
                 ev.channel.onopen = function(ev2) {
                     // nodejs wrtc-library does not include a channel reference in `ev2.target`
                     var peer = new Peer(from, pc, ev.channel);
                     this._router.addPeer(peer, function(err) {
-                        if (typeof(this._pending[from].callback) === 'function') {
-                            this._pending[from].callback();
+                        if (this._pending[message.seqnr]) {
+                            if (typeof(this._pending[message.seqnr].callback) === 'function') {
+                                this._pending[message.seqnr].callback(err, peer);
+                            }
+                            delete this._pending[message.seqnr];
                         }
-                        delete this._pending[from];
-                        this._connections[from] = peer;
                     }.bind(this));
                 }.bind(this);
             }.bind(this);
-            pc.createAnswer(this._onCreateAnswerSuccess.bind(this, from, pc), this._onCreateAnswerError.bind(this));
+            pc.createAnswer(this._onCreateAnswerSuccess.bind(this, from, pc, message.seqnr), this._onCreateAnswerError.bind(this));
         }
     },
 
-    _onCreateAnswerSuccess: function(to, pc, sessionDesc) {
+    _onCreateAnswerSuccess: function(to, pc, seqnr, sessionDesc) {
         pc.onicecandidate = function(iceEvent) {
             if (pc.iceGatheringState === 'complete' || iceEvent.candidate === null) {
                 // spec specifies that a null candidate means that the ice gathering is complete
@@ -292,6 +282,7 @@ ConnectionManager.prototype = {
                 pc.createAnswer(function(answer) {
                     this._router.route(to, {
                         type: 'signaling-protocol',
+                        seqnr: seqnr,
                         to: to.toString(),
                         from: this._router.id.toString(),
                         payload: {
@@ -299,12 +290,16 @@ ConnectionManager.prototype = {
                             answer: answer
                         }
                     }, function(err) {
-                        console.log(err);
+                        if (err) {
+                            console.log(err);
+                        }
                     });
                 }.bind(this), this._onCreateAnswerError.bind(this));
             }
         }.bind(this);
-        pc.setLocalDescription(new RTCSessionDescription(sessionDesc), function() {});
+        pc.setLocalDescription(new RTCSessionDescription(sessionDesc), function() {}, function(err) {
+            console.error("Error setting local description", err);
+        });
     },
 
     _onCreateAnswerError: function(error) {

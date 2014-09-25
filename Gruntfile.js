@@ -119,6 +119,8 @@ module.exports = function(grunt) {
     grunt.registerTask('test:core', 'simplemocha:core');
     grunt.registerTask('default', ['verify', 'jsdoc', 'jshint', 'test', 'beautify', 'dist']);
     grunt.registerTask('tags', function() {
-        shell.exec('cd js && jsctags *.js chord/*.js third_party/*.js');
+        shell.exec('cd js && jsctags *.js');
+        shell.exec('cd js/chord && jsctags *.js');
+        shell.exec('cd js/third_party && jsctags *.js');
     });
 };
