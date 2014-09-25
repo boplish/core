@@ -96,6 +96,7 @@ BOPlishClient.prototype = {
         var self = this;
         var protocol = {
             identifier: protocolIdentifier,
+            bopid: this.bopid,
             onmessage: function() {},
             send: function(bopuri, msg) {
                 if (!msg) {
