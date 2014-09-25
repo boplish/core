@@ -354,7 +354,7 @@ Router.prototype = {
         }
     },
 
-    _processDiscoveryCallback: function(err, id) {
+    _processDiscoveryCallback: function(id, err) {
         if (err) {
             console.log('Error connecting to', id, ':', err);
         }
