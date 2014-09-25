@@ -1,10 +1,10 @@
 /** @fileOverview API for application developers. */
 
-var ConnectionManager = require('./connectionmanager.js');
-var Router = require('./router.js');
-var sha1 = require('./third_party/sha1.js');
-var Chord = require('./chord/chord.js');
-var BigInteger = require('./third_party/BigInteger.js');
+var ConnectionManager = require('../js/connectionmanager.js');
+var Router = require('../js/router.js');
+var sha1 = require('../js/third_party/sha1.js');
+var Chord = require('../js/chord/chord.js');
+var BigInteger = require('../js/third_party/BigInteger.js');
 
 /**
  * @constructor
