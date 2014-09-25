@@ -1,10 +1,9 @@
-var ChordNode = require('./node');
-
-var Peer = require('../peer');
-var Sha1 = require('../third_party/sha1');
-var BigInteger = require('../third_party/BigInteger');
+var ChordNode = require('./node.js');
+var Peer = require('../peer.js');
+var Sha1 = require('../third_party/sha1.js');
+var BigInteger = require('../third_party/BigInteger.js');
 var async = require("async");
-var Range = require("./range");
+var Range = require("./range.js");
 
 /** @fileOverview Chord DHT implementation */
 

@@ -1,5 +1,5 @@
-var BigInteger = require("../third_party/BigInteger");
-var Range = require("./range");
+var BigInteger = require("../third_party/BigInteger.js");
+var Range = require("./range.js");
 
 var ChordNode = function(peer, chord, localNode) {
     if (!(this instanceof ChordNode)) {
