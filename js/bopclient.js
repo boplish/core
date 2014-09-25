@@ -4,7 +4,7 @@
 var bowser = require('bowser');
 var ConnectionManager = require('./connectionmanager.js');
 var sha1 = require('./third_party/sha1.js');
-var Chord = require('./chord/chord.js');
+var Router = require('./chord/chord.js');
 var BigInteger = require('./third_party/BigInteger.js');
 
 /**
@@ -48,7 +48,7 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
         errorCallback('Syntax error in bootstrapHost parameter');
         return;
     }
-    var id = Chord.randomId();
+    var id = Router.randomId();
     var channel = new WebSocket(bootstrapHost + 'ws/' + id.toString());
 
     this.bopid = Math.random().toString(36).replace(/[^a-z]+/g, '') + '@id.com';
@@ -62,7 +62,7 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     }.bind(this);
 
     this._connectionManager = new ConnectionManager();
-    this._router = new Chord(id, channel, this._connectionManager);
+    this._router = new Router(id, channel, this._connectionManager);
 
     function _authBopId() {
         // creating a random bopid (for now) and store it in the dht
