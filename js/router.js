@@ -185,7 +185,7 @@ Router.prototype = {
 
     _handleGetResponse: function(msg) {
         if (typeof(this._pendingGetRequests[msg.payload.hash]) === 'function') {
-            this._pendingGetRequests[msg.payload.hash.toString()](msg.payload.val);
+            this._pendingGetRequests[msg.payload.hash.toString()](null, msg.payload.val);
             delete this._pendingGetRequests[msg.payload.hash.toString()];
         }
     },
