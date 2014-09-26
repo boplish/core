@@ -34,6 +34,7 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
     this._remotes = {};
     this._connectionManager = connectionManager;
     this._messageCallbacks = {};
+    this._monitorCallback = function() {};
     this._fingerTable = {};
     this._m = 8;
     this._joining = false;
@@ -283,6 +284,7 @@ Chord.prototype.remove = function(key) {
 };
 
 Chord.prototype.route = function(to, message, callback) {
+    this._monitorCallback(message);
     if (to === "*") {
         this.log("routing (" + [message.type, message.payload.type, message.seqnr].join(", ") + ") to signaling server");
         this._localNode.route(to, message, callback);
@@ -316,6 +318,26 @@ Chord.prototype.route = function(to, message, callback) {
 Chord.prototype.registerDeliveryCallback = function(protocol, callback) {
     this.log("registering callback for", protocol);
     this._messageCallbacks[protocol] = callback;
+};
+
+Chord.prototype.registerMonitorCallback = function(callback) {
+    this._monitorCallback = callback;
+};
+
+/**
+ * Return a list of all peer ids currently in the routing table.
+ *
+ * @returns {Array}
+ */
+Chord.prototype.getPeerIds = function() {
+    var peers = [];
+    var peer;
+    for (peer in this._remotes) {
+        if (this._remotes.hasOwnProperty(peer)) {
+            peers.push(peer);
+        }
+    }
+    return peers;
 };
 
 Chord.randomId = function() {
