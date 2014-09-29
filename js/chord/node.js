@@ -13,6 +13,9 @@ var ChordNode = function(peer, chord, localNode) {
     this._peer = peer;
     if (this._peer.dataChannel) {
         this._peer.dataChannel.onmessage = this._onmessage.bind(this);
+        this._peer.dataChannel.onerror = function(ev) {
+            console.log("Error on Data Channel", ev);
+        };
     }
     this._successor = null;
     this._predecessor = null;
