@@ -1,7 +1,7 @@
 var Server = require('./server');
-var Chord = require('./chord');
-var BigInteger = require('../third_party/BigInteger');
-var ChordNode = require('./node');
+var Chord = require('../js/chord/chord');
+var BigInteger = require('../js/third_party/BigInteger');
+var ChordNode = require('../js/chord/node');
 
 var ids = [];
 var chords = [];
@@ -26,14 +26,14 @@ for (var i = 0; i < 30; i++) {
 }
 
 ids.forEach(function(id) {
-    var chord = new Chord(id);
+    var chord;
     var server = new Server(id);
     server.onconnect = function(from) {
-        chord.add_peer(from, function() {
+        chord.addPeer(from, function() {
             console.log("added peer " + from.id + " to " + id);
         });
     };
-    chord.connectionManager = server;
+    chord = new Chord(id, server, server);
     chords.push(chord);
 });
 

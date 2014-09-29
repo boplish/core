@@ -36,7 +36,7 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
     this._messageCallbacks = {};
     this._monitorCallback = function() {};
     this._fingerTable = {};
-    this._m = 8;
+    this._m = 160;
     this._joining = false;
     this._joined = false; // are we joined to a Chord ring, yet?
 
@@ -146,26 +146,22 @@ Chord.prototype.join = function(bootstrap_id, callback) {
         return;
     }
     self._joining = true;
-    self.log("Joining through " + bootstrap_id.toString());
-    self._connectionManager.connect(bootstrap_id, function(err, peer) {
+    self.connect(bootstrap_id, function(err, bootstrapNode) {
         if (err) {
             callback(err);
             return;
         }
-        var bootstrapNode = new ChordNode(peer, self);
-        self.log("finding successor of " + self._localNode._peer.id.toString());
         bootstrapNode.find_successor(self._localNode._peer.id, function(err, successor) {
             if (err) {
                 callback(err);
                 return;
             }
-            self.log("successor is " + successor.toString());
-            self._connectionManager.connect(successor, function(err, successorPeer) {
+            self.connect(successor, function(err, successorNode) {
                 if (err) {
                     callback(err);
                     return;
                 }
-                self._localNode._successor = new ChordNode(successorPeer, self);
+                self._localNode._successor = successorNode;
                 self._localNode._successor.find_predecessor(self._localNode._peer.id, function(err, predecessor) {
                     self.log("predecessor is " + predecessor.toString());
                     if (err) {
@@ -178,12 +174,12 @@ Chord.prototype.join = function(bootstrap_id, callback) {
                             callback(err);
                             return;
                         }
-                        self._connectionManager.connect(predecessor, function(err, predecessorPeer) {
+                        self.connect(predecessor, function(err, predecessorNode) {
                             if (err) {
                                 callback(err);
                                 return;
                             }
-                            self._localNode._predecessor = new ChordNode(predecessorPeer, self);
+                            self._localNode._predecessor = predecessorNode;
                             self._localNode._predecessor.update_successor(self._localNode.id(), function() {
                                 self.log("updated successor");
                                 self._joining = false;
@@ -197,9 +193,14 @@ Chord.prototype.join = function(bootstrap_id, callback) {
     });
 };
 
+Chord.prototype._addRemote = function(node) {
+    this._remotes[node.id()] = node;
+};
+
 Chord.prototype.find_successor = function(id, callback) {
     var self = this;
     if (self._localNode.responsible(id)) {
+        self.log("It is me");
         callback(null, self._localNode.id());
     } else if (Range.inLeftClosedInterval(id, self._localNode.id(), self._localNode.successor_id())) {
         self._localNode.successor(function(err, successorNode) {
@@ -225,14 +226,29 @@ Chord.prototype.find_predecessor = function(id, callback) {
     }
 };
 
+Chord.prototype.connect = function(id, callback) {
+    var self = this;
+    if (this._remotes[id]) {
+        callback(null, this._remotes[id]);
+    } else {
+        this._connectionManager.connect(id, function(err, peer) {
+            if (err) {
+                callback(err);
+                return;
+            }
+            self._addRemote(new ChordNode(peer, self, false));
+            callback(null, self._remotes[id]);
+        });
+    }
+};
+
 /**
- *
- *
  * @param dc DataChannel connection to remote peer
  */
 Chord.prototype.addPeer = function(peer, callback) {
+    this._remotes[peer.id] = new ChordNode(peer, this, false);
     // TODO: what if we already have a node with this ID?
-    if (Object.keys(this._remotes).length === 0 && !this._joining) {
+    if (Object.keys(this._remotes).length === 1 && !this._joining) {
         this.join(peer.id, function(err) {
             if (err) {
                 callback(err);
@@ -242,7 +258,6 @@ Chord.prototype.addPeer = function(peer, callback) {
             callback();
         });
     } else {
-        this._remotes[peer.id] = new ChordNode(peer, this);
         callback();
     }
     // TODO: implement removing peer/updating finger table

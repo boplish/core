@@ -3,7 +3,7 @@ var Range = require("./range.js");
 
 var ChordNode = function(peer, chord, localNode) {
     if (!(this instanceof ChordNode)) {
-        return new ChordNode(peer, chord);
+        return new ChordNode(peer, chord, localNode);
     }
 
     if (typeof peer === "undefined") {
@@ -49,7 +49,9 @@ ChordNode.prototype = {
     },
 
     toString: function() {
-        return "[" + this._peer.id.toString() + "," + this.successor_id().toString() + "," + this.predecessor_id().toString() + "]";
+        var succ_id = this.successor_id();
+        var pred_id = this.predecessor_id();
+        return "[" + this._peer.id.toString() + "," + (succ_id ? succ_id.toString() : "") + "," + (pred_id ? pred_id.toString() : "") + "]";
     },
 
     id: function() {
@@ -58,16 +60,18 @@ ChordNode.prototype = {
 
     successor: function(cb) {
         var self = this;
+        self.log("What is my successor?");
         if (self._successor.hasOwnProperty && self._successor.hasOwnProperty("_peer")) {
+            self.log("I know my successor");
             cb(null, self._successor);
             return;
         } else {
-            self.log("connecting to successor");
-            self._chord._connectionManager.connect(self.successor_id(), function(err, successorPeer) {
+            self.log("Gotta connect to my successor");
+            self._chord.connect(self.successor_id(), function(err, successorNode) {
                 if (err) {
                     throw err;
                 }
-                cb(null, new ChordNode(successorPeer, self._chord));
+                cb(null, successorNode);
                 return;
             });
         }
@@ -75,6 +79,7 @@ ChordNode.prototype = {
 
     find_successor: function(id, cb) {
         var self = this;
+        self.log("finding successor of", id);
         this._send_request({
             type: this.message_types.FIND_SUCCESSOR,
             id: id.toString()
@@ -288,7 +293,7 @@ ChordNode.prototype = {
     },
 
     _send_request: function(msg, cb) {
-        msg.seqnr = this._seqnr++; // TODO(max): handle overflows
+        msg.seqnr = Math.floor(Math.random() * 4294967296);
         this._pending[msg.seqnr] = cb;
         this._send(msg);
     },

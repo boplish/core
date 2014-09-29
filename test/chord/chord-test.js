@@ -45,28 +45,37 @@ function mockHash() {
 describe('Chord', function() {
     describe('constructor', function() {
         it('should return an instance', function() {
-            var c = new Chord(new BigInteger(5), {});
+            var c = new Chord(new BigInteger(5), {}, {});
             c.should.be.an.instanceof(Chord);
             c.should.have.property('_connectionManager', {});
-            assert(c.id().equals(new BigInteger(5)));
+            c.should.have.property('_localNode');
+            c._localNode.should.be.an.instanceof(ChordNode);
+
+            assert(c.id.equals(new BigInteger(5)));
         });
         it('should start with itself as succ and pred', function() {
             var c = new Chord(new BigInteger(5));
-            assert(c._localNode.id().equals(c._localNode._successor));
-            assert(c._localNode.id().equals(c._localNode._predecessor));
+            c._localNode._successor.should.equal(c._localNode);
+            c._localNode._predecessor.should.equal(c._localNode);
+            assert.equal(c._localNode.successor_id(), c.id);
+            assert.equal(c._localNode.predecessor_id(), c.id);
         });
         it('should initialize finger table', function() {
             var hash = mockHash(),
                 c = new Chord(new BigInteger(0)),
                 i;
-            assert.equal(Object.keys(c._fingerTable).length, 8);
-            for (i = 1; i <= 8; i++) {
+            assert.equal(Object.keys(c._fingerTable).length, 160);
+            for (i = 1; i <= 160; i++) {
                 assert.equal(c._fingerTable[i].start().toString(), (BigInteger(2).pow(BigInteger(i - 1)).toString()));
                 assert.equal(c._fingerTable[i].node, c._localNode);
             }
-            assert.equal(c._localNode._successor, c.id());
-            assert.equal(c._localNode._predecessor, c.id());
+
         });
+    });
+});
+/*
+
+
     });
     describe('closest preceding finger', function() {
         it('should return local node prior to joining', function() {

@@ -16,7 +16,8 @@ var ConnectionManager = function() {
     this._pending = {};
     this._pcoptions = {
         iceServers: [{
-            "url": "stun:stun.l.google.com:19302"
+            //"url": "stun:stun.l.google.com:19302"
+            "url": "stun:localhost"
         }]
     };
     //possible states: 'uninitialized', 'bootstrapping', 'ready'
@@ -193,14 +194,12 @@ ConnectionManager.prototype = {
             pending.dc.onopen = function(ev) {
                 // nodejs wrtc-library does not include a channel reference in `ev.target`
                 var peer = new Peer(from, pending.pc, pending.dc);
-                this._router.addPeer(peer, function(err) {
-                    if (typeof(pending.callback) === 'function') {
-                        // TODO(max): would it make sense to pass the remote peer's
-                        // ID to the handler?
-                        pending.callback(err, peer);
-                    }
-                    delete this._pending[message.seqnr];
-                }.bind(this));
+                if (typeof(pending.callback) === 'function') {
+                    // TODO(max): would it make sense to pass the remote peer's
+                    // ID to the handler?
+                    pending.callback(null, peer);
+                }
+                delete this._pending[message.seqnr];
             }.bind(this);
         }
     },

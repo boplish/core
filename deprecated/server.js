@@ -1,4 +1,4 @@
-var Peer = require("../peer");
+var Peer = require("../js/peer");
 
 var Server = function(id) {
     if (typeof id === "undefined") {
