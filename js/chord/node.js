@@ -300,7 +300,11 @@ ChordNode.prototype = {
 
     _send: function(msg) {
         msg.from = this._chord.id.toString();
-        this._peer.dataChannel.send(JSON.stringify(msg));
+        try {
+            this._peer.dataChannel.send(JSON.stringify(msg));
+        } catch (e) {
+            this.log("Error sending", e);
+        }
     },
 
     _onmessage: function(rawMsg) {
