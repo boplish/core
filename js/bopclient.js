@@ -123,11 +123,27 @@ BOPlishClient.prototype = {
             type: protocolIdentifier
         };
         var bopidHash = sha1.bigIntHash(bopuri);
-        console.log(bopidHash);
 
         this._router.get(bopidHash, function(err, auth) {
-            this._router.route(new BigInteger(auth.chordId), msg, function(err) {});
+            if (err) {
+                console.log(err);
+            } else if (auth && auth.chordId) {
+                console.log('Successfully retrieved', auth, 'from DHT using hash', bopidHash);
+                this._router.route(new BigInteger(auth.chordId), msg, function(err) {});
+            } else {
+                console.log('Malformed response from GET request.', bopidHash, 'returned', auth);
+            }
         }.bind(this));
+    },
+
+    _get: function(hashString, cb) {
+        var hash = sha1.bigIntHash(hashString);
+        this._router.get(hash, cb);
+    },
+
+    _put: function(hashString, value, cb) {
+        var hash = sha1.bigIntHash(hashString);
+        this._router.put(sha1.bigIntHash(hashString), value, cb);
     },
 
     /**
@@ -139,6 +155,7 @@ BOPlishClient.prototype = {
     setMonitorCallback: function(callback) {
         this._router.registerMonitorCallback(callback);
     },
+
     /**
      * @return {Array} The list of all IDs of peers this peer has an open
      * connection to.
