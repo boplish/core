@@ -312,6 +312,7 @@ ChordNode.prototype = {
 
     _onmessage: function(rawMsg) {
         var msg = JSON.parse(rawMsg.data);
+        this.log("incoming message: " + rawMsg.data);
         var cb = this._pending[msg.seqnr];
         var arr = [msg.type];
         if (msg.payload && msg.payload.type) {
@@ -326,7 +327,6 @@ ChordNode.prototype = {
                 arr.push(msg.payload.payload.type);
             }
         }
-        this.log("incoming message: " + arr.join(", "));
         // if we find a callback this message is a response to a request of ours
         if (typeof(cb) === 'function') {
             this._handle_response(msg, cb);

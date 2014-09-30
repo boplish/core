@@ -415,7 +415,13 @@ var bigInt = (function() {
                     str = "0";
                 }
                 var s = first.sign === sign.positive ? "" : "-";
-                return s + str;
+
+                var res = s + str;
+                // pad to 49 chars
+                if (res.length === 49) {
+                    return res;
+                }
+                return "000000000000000000000000000000000000000000000000".substr(0, 49 - res.length) + res;
             },
             toJSNumber: function(m) {
                 return +o.toString(m);
