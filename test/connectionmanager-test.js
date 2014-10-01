@@ -26,9 +26,6 @@ describe('ConnectionManager', function() {
             cm = ConnectionManager();
             cm.should.be.an.instanceof(ConnectionManager);
         });
-        it('should set the correct state', function() {
-            cm.should.have.property('_state', 'uninitialized');
-        });
     });
     describe('#bootstrap()', function() {
         it('should register the correct callbacks', function() {
@@ -60,81 +57,34 @@ describe('ConnectionManager', function() {
             };
             cm.bootstrap(router);
         });
-        it('should set the correct state', function(done) {
+        it('should allow being called twice', function(done) {
             var router = {
                 id: function() {
                     return 1;
                 },
                 registerDeliveryCallback: function() {},
-                route: function() {
-                    cm.should.have.property('_state', 'bootstrapping');
-                    done();
+                route: function(recv, msg) {
+                    cm._onReceiveAnswer({
+                        seqnr: msg.seqnr,
+                        payload: {
+                            answer: null
+                        },
+                    }, null);
+                    cm._pending[msg.seqnr].dc.onopen();
+                },
+                addPeer: function(peer, cb) {
+                    cb();
                 }
             };
-            cm.bootstrap(router);
-        });
-        it('should not allow being called twice', function(done) {
-            var router = {
-                id: function() {
-                    return 1;
-                },
-                registerDeliveryCallback: function() {},
-                route: function() {},
-            };
-            cm.bootstrap(router);
-            cm.bootstrap(router, null, function() {
-                done();
+            var called = 0;
+            cm.bootstrap(router, function() {
+                called += 1;
             });
-        });
-        it('should connect two peers on bootstrap', function() {
-            var sigch1 = {
-                send: function(data) {
-                    data.should.have.property('from', router1.id);
-                    if (data.payload.type === "signaling-protocol" && data.payload.payload.type === "offer") {
-                        sigch1.onmessage({
-                            data: JSON.stringify({
-                                to: router1.id,
-                                from: router2.id,
-                                payload: {
-                                    type: "signaling-protocol",
-                                    payload: {
-                                        type: "denied"
-                                    }
-                                }
-                            })
-                        });
-                        return;
-                    }
-                    sigch2.onmessage({
-                        data: JSON.stringify(data)
-                    });
-                },
-            };
-            var sigch2 = {
-                send: function(data) {
-                    data.should.have.property('from', router2.id);
-                    data.should.have.property('to', '*');
-                    sigch1.onmessage({
-                        data: JSON.stringify(data)
-                    });
-                },
-            };
-            var cm1 = new ConnectionManager();
-            var router1 = new Mocks.MockRouter(new BigInteger(1), sigch1, cm1);
-            var cm2 = new ConnectionManager();
-            var router2 = new Mocks.MockRouter(new BigInteger(2), sigch2, cm2);
-            cm1.bootstrap(router1, function() {}, function() {});
-            cm2.bootstrap(router2, function() {}, function() {});
-            var ev = {
-                channel: {}
-            };
-            cm1._bootstrap.pc.ondatachannel(ev);
-            ev.channel.onopen();
-            cm2._bootstrap.dc.onopen();
-            router1.should.have.property("_peer");
-            router1._peer.should.have.property("id");
-            assert.ok(router1._peer.id.equals(router2.id));
-            assert.ok(router2._peer.id.equals(router1.id));
+            cm.bootstrap(router, function() {
+                if (called == 1) {
+                    done();
+                }
+            });
         });
     });
 });
