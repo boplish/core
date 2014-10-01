@@ -275,7 +275,8 @@ sha1.bigInteger = function(digest) {
     var value = BigInteger(),
         i;
     for (i = digest.length - 1; i >= 0; i--) {
-        value = value.multiply(256).add(digest[i]);
+        var j = 8 * (digest.length - i - 1);
+        value = value.add(new BigInteger(2).pow(j).multiply(digest[i]));
     }
     return value;
 };
