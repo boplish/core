@@ -48,8 +48,32 @@ describe('BopURI', function() {
 
             uri = new BopURI('bop:max:proto/?a/b');
             uri.should.have.property('query', 'a/b');
+        });
+        describe('#create', function() {
+            it('should return an instance', function() {
+                var uri = BopURI.create('max@example.org', 'documents', '/chat/room1');
+                uri.should.be.an.instanceof(BopURI);
+                uri.should.have.property('scheme', 'bop');
+                uri.should.have.property('uid', 'max@example.org');
+                uri.should.have.property('protocol', 'documents');
+                uri.should.have.property('path', '/chat/room1');
+                uri.should.not.have.property('query');
 
-
+                uri = BopURI.create('max@example.org', 'documents', 'chat/room1', 'status=away');
+                uri.should.be.an.instanceof(BopURI);
+                uri.should.have.property('scheme', 'bop');
+                uri.should.have.property('uid', 'max@example.org');
+                uri.should.have.property('protocol', 'documents');
+                uri.should.have.property('path', '/chat/room1');
+                uri.should.have.property('query', 'status=away');
+            });
+        });
+        describe('#toString', function() {
+            it('should return the correct string', function() {
+                new BopURI('bop:max:proto/?q').toString().should.equal('bop:max:proto/?q');
+                BopURI.create('max@example.org', 'documents', '/chat/room1').toString().should.equal('bop:max@example.org:documents/chat/room1');
+                BopURI.create('max@example.org', 'documents', 'chat/room1', 'status=away').toString().should.equal('bop:max@example.org:documents/chat/room1?status=away');
+            });
         });
     });
 });

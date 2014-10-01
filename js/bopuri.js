@@ -38,7 +38,15 @@ var BopURI = function(str) {
     return this;
 };
 
-BopURI.prototype = {};
+BopURI.create = function(authority, protocol, path, query) {
+    return new BopURI('bop:' + authority + ':' + protocol + (path[0] === '/' ? '' : '/') + path + (query ? '?' + query : ''));
+};
+
+BopURI.prototype = {
+    toString: function() {
+        return this.scheme + ":" + this.uid + ":" + this.protocol + this.path + (this.query ? "?" + this.query : "");
+    }
+};
 
 if (typeof(module) !== 'undefined') {
     module.exports = BopURI;
