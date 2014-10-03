@@ -6,6 +6,7 @@ var ConnectionManager = require('./connectionmanager.js');
 var sha1 = require('./third_party/sha1.js');
 var Router = require('./chord/chord.js');
 var BigInteger = require('./third_party/BigInteger.js');
+var BopURI = require('./bopuri.js');
 
 /**
  * @constructor
@@ -62,6 +63,7 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     }.bind(this);
 
     this._connectionManager = new ConnectionManager();
+    this._connectionManager.onconnection = this._onconnection.bind(this);
     this._router = new Router(id, channel, this._connectionManager);
 
     function _authBopId() {
@@ -77,9 +79,9 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
             }
         }
         this._router.put(sha1.bigIntHash(this.bopid), auth, errorHandler);
-        /*setInterval(function() {
+        setInterval(function() {
             this._router.put(sha1.bigIntHash(this.bopid), auth, errorHandler);
-        }.bind(this), 2000);*/
+        }.bind(this), 2000);
         successCallback();
     }
 };
@@ -97,33 +99,38 @@ BOPlishClient.prototype = {
         var self = this;
         var protocol = {
             identifier: protocolIdentifier,
-            bopid: this.bopid,
-            onmessage: function() {},
-            send: function(bopuri, msg) {
-                if (!msg) {
-                    throw new Error('Trying to send empty message');
-                }
-                self._send(bopuri, protocolIdentifier, msg);
+            bopid: self.bopid,
+            connect: function(bopid, callback) {
+                // TODO
+                // 1. Über ConnectionManager Verb. aufbauen
+                // 2. Protokoll aushandeln
+                // 3. Übergabe an Protokoll-Impl. beim Remote ankündigen
+                // 4. callback mit DC aufrufen
             }
         };
-        this._router.registerDeliveryCallback(protocolIdentifier, function(msg) {
-            protocol.onmessage(msg.from, msg.payload);
-        });
         return protocol;
+    },
+
+    _onconnection: function(dc) {
+        // TODO
+        // 1. Protokoll aushandeln
+        // 2. Auf Übergabe des DC der Remote-Seite an die Protokoll-Instanz
+        //    warten
+        // 3. DC an passende lokale Protokoll-Instanz übergeben
     },
 
     /**
      * todo
      *
      */
-    _send: function(bopuri, protocolIdentifier, msg) {
+    _send: function(bopuri, callback) {
         msg = {
-            payload: msg,
-            to: bopuri,
+            payload: {},
+            uri: bopuri.toString(),
             from: this.bopid,
-            type: protocolIdentifier
+            type: bopuri.protocol
         };
-        var bopidHash = sha1.bigIntHash(bopuri);
+        var bopidHash = sha1.bigIntHash(bopuri.uid);
 
         this._router.get(bopidHash, function(err, auth) {
             if (err) {
@@ -164,6 +171,8 @@ BOPlishClient.prototype = {
         return this._router.getPeerIds();
     }
 };
+
+BOPlishClient.BopURI = BopURI;
 
 if (typeof(module) !== 'undefined') {
     module.exports = BOPlishClient;

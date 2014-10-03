@@ -190,15 +190,21 @@ ConnectionManager.prototype = {
         pc.ondatachannel = function(ev) {
             ev.channel.onopen = function(ev2) {
                 // nodejs wrtc-library does not include a channel reference in `ev2.target`
-                var peer = new Peer(from, pc, ev.channel);
-                this._router.addPeer(peer, function(err) {
-                    if (this._pending[message.seqnr]) {
-                        if (typeof(this._pending[message.seqnr].callback) === 'function') {
-                            this._pending[message.seqnr].callback(err, peer);
+                if (message.endpoint === 'ROUTER') {
+                    var peer = new Peer(from, pc, ev.channel);
+                    this._router.addPeer(peer, function(err) {
+                        if (this._pending[message.seqnr]) {
+                            if (typeof(this._pending[message.seqnr].callback) === 'function') {
+                                this._pending[message.seqnr].callback(err, peer);
+                            }
+                            delete this._pending[message.seqnr];
                         }
-                        delete this._pending[message.seqnr];
+                    }.bind(this));
+                } else if (message.endpoint === 'APPLICATION') {
+                    if (typeof this.onconnection === 'function') {
+                        this.onconnection(ev.channel);
                     }
-                }.bind(this));
+                }
             }.bind(this);
         }.bind(this);
         pc.createAnswer(this._onCreateAnswerSuccess.bind(this, from, pc, message.seqnr), this._onCreateAnswerError.bind(this));
