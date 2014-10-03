@@ -301,11 +301,11 @@ Chord.prototype.remove = function(key) {
 Chord.prototype.route = function(to, message, callback) {
     this._monitorCallback(message);
     if (to === "*") {
-        this.log("routing (" + [message.type, message.payload.type, message.seqnr].join(", ") + ") to signaling server");
+        this.log("routing (" + [message.type, message.seqnr].join(", ") + ") to signaling server");
         this._localNode.route(to, message, callback);
     } else if (this.id.equals(to)) {
         try {
-            this.log("(" + [message.type, message.payload.type, message.seqnr].join(", ") + ") is for me");
+            this.log("(" + [message.type, message.seqnr].join(", ") + ") is for me");
             this._messageCallbacks[message.type](message);
             callback(null);
         } catch (e) {
