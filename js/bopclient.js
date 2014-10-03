@@ -79,12 +79,13 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
         this._router.put(sha1.bigIntHash(this.bopid), auth, errorHandler);
         /*setInterval(function() {
             this._router.put(sha1.bigIntHash(this.bopid), auth, errorHandler);
-        }.bind(this), 500);*/
+        }.bind(this), 2000);*/
         successCallback();
     }
 };
 
 BOPlishClient.prototype = {
+
     /**
      * Registers and returns an protocol-specific object that can be used by
      * application protocols to interact with the BOPlish sytem.
@@ -128,10 +129,9 @@ BOPlishClient.prototype = {
             if (err) {
                 console.log(err);
             } else if (auth && auth.chordId) {
-                console.log('Successfully retrieved', auth, 'from DHT using hash', bopidHash);
                 this._router.route(new BigInteger(auth.chordId), msg, function(err) {});
             } else {
-                console.log('Malformed response from GET request.', bopidHash, 'returned', auth);
+                throw new Error('Malformed response from GET request for ' + bopidHash + '. Returned ' + JSON.stringify(auth));
             }
         }.bind(this));
     },

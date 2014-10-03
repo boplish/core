@@ -3,6 +3,7 @@
 var assert = require("should");
 var BOPlishClient = require('../js/bopclient.js');
 var sinon = require('sinon');
+var BigInteger = require('js/third_party/BigInteger');
 
 describe('Application', function() {
     var bc;
@@ -74,28 +75,44 @@ describe('Application', function() {
                 }).should.
                 throw ();
             });
-            /*it('should correctly pass messages to the Router', function(){
+            it('should correctly pass messages to the Router', function() {
                 var proto = bc.registerProtocol(protoIdentifier);
                 var stub_router_route = sinon.stub(bc._router, 'route');
-                var bopid = {uid: 'test'};
-                
+                var stub_router_get = sinon.stub(bc._router, 'get', function(key, cb) {
+                    cb(null, {
+                        chordId: "12345"
+                    });
+                });
+                var bopid = {
+                    uid: 'test'
+                };
+
                 proto.send(bopid, testMsg);
-                
+
                 sinon.assert.calledOnce(stub_router_route);
-                sinon.assert.calledWith(stub_router_route, 'test', protoIdentifier, testMsg);
+                assert.ok(new BigInteger("12345").equals(stub_router_route.args[0][0]));
+                assert.deepEqual(stub_router_route.args[0][1], {
+                    from: bc.bopid,
+                    to: bopid,
+                    type: protoIdentifier,
+                    payload: testMsg
+                });
             });
-            it('should allow to receive messages', function(done){
+            it('should allow to receive messages', function(done) {
                 stub_router_registerDeliveryCallback.restore();
                 var proto = bc.registerProtocol(protoIdentifier);
 
-                proto.onmessage = function(bopuri, from, msg) {
-                    bopuri.should.be.ok;
+                proto.onmessage = function(from, msg) {
                     from.should.equal('123');
                     msg.should.equal(testMsg);
                     done();
                 };
-                bc._router._messageCallbacks[protoIdentifier]('bop://user@example.org', '123', testMsg);
-            });*/
+                // FIXME(max): don't make assumptions about router impl
+                bc._router._messageCallbacks[protoIdentifier]({
+                    from: '123',
+                    payload: testMsg
+                });
+            });
         });
     });
     describe('#setMonitorCallback()', function() {

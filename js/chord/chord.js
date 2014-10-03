@@ -331,7 +331,6 @@ Chord.prototype.route = function(to, message, callback) {
 };
 
 Chord.prototype.registerDeliveryCallback = function(protocol, callback) {
-    this.log("registering callback for", protocol);
     this._messageCallbacks[protocol] = callback;
 };
 

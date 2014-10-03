@@ -95,13 +95,11 @@ ConnectionManager.prototype = {
             dc: dc,
             callback: callback,
         };
-        console.log("connecting to " + to.toString() + " with seqnr " + seqnr);
         pc.createOffer(this._onCreateOfferSuccess.bind(this, pc, to, this._pending[seqnr],
             callback), this._onCreateOfferError.bind(this, callback));
     },
 
     _onCreateOfferSuccess: function(pc, to, pendingOffer, callback, sessionDesc) {
-        console.log("created offer for " + to.toString() + " with seqnr " + pendingOffer.seqnr);
         if (pendingOffer.drop) {
             return;
         }

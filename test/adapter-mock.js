@@ -220,7 +220,7 @@ var CustomWebSocket = function(url) {
         that.onclose(msg);
     });
     setTimeout(function() { // break event loop to set callbacks
-        websocketClient.connect(url);
+        //websocketClient.connect(url);
     }, 0);
 
     return this;
