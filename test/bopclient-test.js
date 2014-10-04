@@ -3,7 +3,7 @@
 var assert = require("should");
 var BOPlishClient = require('../js/bopclient.js');
 var sinon = require('sinon');
-var BigInteger = require('js/third_party/BigInteger');
+var BigInteger = require('../js/third_party/BigInteger');
 
 describe('Application', function() {
     var bc;
