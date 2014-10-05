@@ -19,6 +19,15 @@ describe('Sha1', function() {
             var expected = new BigInteger('1302030195245224886854489520030607688166950098602');
             assert.ok(actual.equals(expected));
         });
+        it('should be performant', function() {
+            var i, digest, sha1 = new Sha1();
+            sha1.update('max@example.org');
+            digest = sha1.digest();
+            this.timeout(25);
+            for (i = 0; i < 10; i++) {
+                Sha1.bigInteger(digest);
+            }
+        });
     });
     describe('#bigIntHash', function() {
         it('should return the correct BigInteger', function() {
