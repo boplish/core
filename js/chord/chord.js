@@ -39,6 +39,7 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
     this._m = 160;
     this._joining = false;
     this._joined = false; // are we joined to a Chord ring, yet?
+    this.debug = false;
 
     var memoizer = Helper.memoize(Helper.fingerTableIntervalStart.bind(this));
     for (var i = 1; i <= this._m; i++) {
@@ -116,6 +117,9 @@ Chord.prototype._closest_preceding_finger = function(id) {
 };
 
 Chord.prototype.log = function(msg) {
+    if (!this.debug) {
+        return;
+    }
     var prelude = "[" + this._localNode._peer.id.toString() + "]";
     if (arguments.length > 1) {
         console.log([prelude, msg].concat(Array.prototype.slice.call(arguments, 1)).join(" "));
@@ -242,11 +246,8 @@ Chord.prototype.connect = function(id, callback) {
     }
 };
 
-/**
- * @param dc DataChannel connection to remote peer
- */
 Chord.prototype.addPeer = function(peer, callback) {
-    this._remotes[peer.id] = new ChordNode(peer, this, false);
+    this._remotes[peer.id.toString()] = new ChordNode(peer, this, false);
     // TODO: what if we already have a node with this ID?
     if (Object.keys(this._remotes).length === 1 && !this._joining) {
         this.join(peer.id, function(err) {
@@ -260,9 +261,13 @@ Chord.prototype.addPeer = function(peer, callback) {
     } else {
         callback();
     }
-    // TODO: implement removing peer/updating finger table
-    //peer.peerConnection.onclosedconnection = this.removePeer.bind(this, peer);
-    // TODO: update finger table
+    peer.onclose = this.removePeer.bind(this, peer);
+    // TODO: update finger table ()
+};
+
+Chord.prototype.removePeer = function(peer) {
+    console.log('peer not reachable:', peer.id.toString());
+    //delete this._remotes[peer.id.toString()];
 };
 
 /**

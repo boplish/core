@@ -47,8 +47,8 @@ Router.prototype = {
      */
     addPeer: function(peer, cb) {
         this._peerTable[peer.id] = peer;
-        peer.dataChannel.onmessage = this.onmessage.bind(this);
-        peer.peerConnection.onclosedconnection = this.removePeer.bind(this, peer);
+        peer.onmessage = this.onmessage.bind(this);
+        peer.onclose = this.removePeer.bind(this, peer);
         if (Object.keys(this._peerTable).length === 1) {
             // ask first peer for its neighbours
             this._discoverNeighbours(peer);
@@ -135,7 +135,7 @@ Router.prototype = {
             return;
         }
         try {
-            receiver.dataChannel.send(JSON.stringify(msg));
+            receiver.send(msg);
         } catch (e) {
             console.log('Unable to route message to ' + msg.to + ' because the DataChannel connection failed.');
         }

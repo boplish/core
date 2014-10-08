@@ -11,18 +11,13 @@ var ChordNode = function(peer, chord, localNode) {
     }
 
     this._peer = peer;
-    if (this._peer.dataChannel) {
-        this._peer.dataChannel.onmessage = this._onmessage.bind(this);
-        this._peer.dataChannel.onerror = function(ev) {
-            console.log("Error on Data Channel", ev);
-        };
-    }
+    this._peer.onmessage = this._onmessage.bind(this);
     this._successor = null;
     this._predecessor = null;
     this._chord = chord;
     this._pending = {};
     this._seqnr = 0;
-    this.debug = true;
+    this.debug = false;
     this._localNode = !!localNode;
     this._store = {};
 
@@ -304,15 +299,13 @@ ChordNode.prototype = {
     _send: function(msg) {
         msg.from = this._chord.id.toString();
         try {
-            this._peer.dataChannel.send(JSON.stringify(msg));
+            this._peer.send(msg);
         } catch (e) {
             this.log("Error sending", e);
         }
     },
 
-    _onmessage: function(rawMsg) {
-        var msg = JSON.parse(rawMsg.data);
-        this.log("incoming message: " + rawMsg.data);
+    _onmessage: function(msg) {
         var cb = this._pending[msg.seqnr];
         var arr = [msg.type];
         if (msg.payload && msg.payload.type) {
