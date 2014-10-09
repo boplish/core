@@ -29,10 +29,11 @@ var Peer = function(id, peerConnection, dataChannel) {
 };
 
 Peer.prototype.send = function(msg) {
+    var stringifiedMsg = JSON.stringify(msg);
     try {
-        this._dataChannel.send(JSON.stringify(msg));
+        this._dataChannel.send(stringifiedMsg);
     } catch (e) {
-        throw ('Peer could not send message over datachannel:' + JSON.stringify(msg));
+        throw new Error('Peer could not send message over datachannel: \'' + stringifiedMsg + '\'; Cause: ' + e.name + ': ' + e.message);
     }
 };
 

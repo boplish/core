@@ -43,53 +43,75 @@ function mockHash() {
 }
 
 describe('Chord', function() {
+    var c, cm, dcStub;
+
+    beforeEach(function() {
+        cm = {
+            connect: function() {}
+        };
+        dcStub = sinon.createStubInstance(DataChannel);
+        c = new Chord(new BigInteger(42), dcStub, cm);
+    });
+
     describe('constructor', function() {
         it('should return an instance', function() {
-            var stub = sinon.createStubInstance(DataChannel);
-            var c = new Chord(new BigInteger(5), stub, {});
             c.should.be.an.instanceof(Chord);
-            c.should.have.property('_connectionManager', {});
+            c.should.have.property('_connectionManager', cm);
             c.should.have.property('_localNode');
             c._localNode.should.be.an.instanceof(ChordNode);
 
             assert(c.id.equals(new BigInteger(5)));
         });
-        it('should start with itself as succ and pred', function() {
-            var stub = sinon.createStubInstance(DataChannel);
-            var c = new Chord(new BigInteger(5), stub, {});
+        it('should start with itself as successor and predecessor', function() {
             c._localNode._successor.should.equal(c._localNode);
             c._localNode._predecessor.should.equal(c._localNode);
             assert.equal(c._localNode.successor_id(), c.id);
             assert.equal(c._localNode.predecessor_id(), c.id);
+            assert.equal(c._localNode._peer._dataChannel, dcStub);
         });
         it('should initialize finger table', function() {
-            var stub = sinon.createStubInstance(DataChannel);
             var hash = mockHash(),
-                c = new Chord(new BigInteger(0), stub, {}),
                 i;
             assert.equal(Object.keys(c._fingerTable).length, 160);
             for (i = 1; i <= 160; i++) {
-                assert.equal(c._fingerTable[i].start().toString(), (BigInteger(2).pow(BigInteger(i - 1)).toString()));
+                assert.equal(c._fingerTable[i].start().toString(), (BigInteger(42).plus(BigInteger(2).pow(BigInteger(i - 1)).toString())));
                 assert.equal(c._fingerTable[i].node, c._localNode);
             }
-
+        });
+    });
+    describe('#id', function() {
+        it('should return correct ID', function() {
+            assert.ok(c.id.equals(new BigInteger(42)));
+        });
+        it('should be immutable', function() {
+            assert.ok(c.id.equals(new BigInteger(42)));
+            c.id = 'something else';
+            assert.ok(c.id.equals(new BigInteger(42)));
+        });
+    });
+    describe('#join', function() {
+        it('should not allow to be called twice', function(done) {
+            c.join(new BigInteger(1), function() {
+                throw new Error("Success callback called");
+            });
+            c.join(new BigInteger(1), function(err) {
+                if (err) {
+                    done();
+                }
+            });
+        });
+        it('should try to connect to bootstrap peer', function() {
+            sinon.spy(cm, "connect");
+            c.join(new BigInteger(1));
+            assert.ok(cm.connect.calledOnce);
+            assert.ok(cm.connect.args[0][0].equals(new BigInteger(1)));
+            cm.connect.restore();
         });
     });
 });
 /*
 
 
-    });
-    describe('closest preceding finger', function() {
-        it('should return local node prior to joining', function() {
-            var hash = mockHash(),
-                c = new Chord(),
-                i;
-            for (i = 0; i <= 255; i++) {
-                assert.equal(c._closest_preceding_finger(i), c._localNode);
-            }
-        });
-    });
     describe('joining', function() {
         it('should call success callback', function(done) {
             var s0 = {}, s1 = {};
