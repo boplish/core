@@ -70,6 +70,7 @@ describe('ConnectionManager', function() {
                             answer: null
                         },
                     }, null);
+                    sinon.stub(cm._pending[msg.seqnr].dc, 'send');
                     cm._pending[msg.seqnr].dc.onopen();
                 },
                 addPeer: function(peer, cb) {

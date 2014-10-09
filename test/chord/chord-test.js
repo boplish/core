@@ -45,7 +45,8 @@ function mockHash() {
 describe('Chord', function() {
     describe('constructor', function() {
         it('should return an instance', function() {
-            var c = new Chord(new BigInteger(5), {}, {});
+            var stub = sinon.createStubInstance(DataChannel);
+            var c = new Chord(new BigInteger(5), stub, {});
             c.should.be.an.instanceof(Chord);
             c.should.have.property('_connectionManager', {});
             c.should.have.property('_localNode');
@@ -54,15 +55,17 @@ describe('Chord', function() {
             assert(c.id.equals(new BigInteger(5)));
         });
         it('should start with itself as succ and pred', function() {
-            var c = new Chord(new BigInteger(5), {}, {});
+            var stub = sinon.createStubInstance(DataChannel);
+            var c = new Chord(new BigInteger(5), stub, {});
             c._localNode._successor.should.equal(c._localNode);
             c._localNode._predecessor.should.equal(c._localNode);
             assert.equal(c._localNode.successor_id(), c.id);
             assert.equal(c._localNode.predecessor_id(), c.id);
         });
         it('should initialize finger table', function() {
+            var stub = sinon.createStubInstance(DataChannel);
             var hash = mockHash(),
-                c = new Chord(new BigInteger(0), {}, {}),
+                c = new Chord(new BigInteger(0), stub, {}),
                 i;
             assert.equal(Object.keys(c._fingerTable).length, 160);
             for (i = 1; i <= 160; i++) {

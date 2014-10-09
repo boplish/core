@@ -32,7 +32,7 @@ Peer.prototype.send = function(msg) {
     try {
         this._dataChannel.send(JSON.stringify(msg));
     } catch (e) {
-        console.log('Peer could not send message over datachannel:', msg);
+        throw ('Peer could not send message over datachannel:' + JSON.stringify(msg));
     }
 };
 
@@ -43,7 +43,7 @@ Peer.prototype._onmessage = function(rawMsg) {
     } catch (e) {
         console.log('Cannot parse message', rawMsg);
     }
-    if (msg.heartbeat) {
+    if (msg.type === 'heartbeat') {
         this._onheartbeat(msg);
     } else {
         this.onmessage(msg);
@@ -60,21 +60,19 @@ Peer.prototype.onclose = function() {
 
 Peer.prototype._sendHeartbeat = function() {
     this.send({
-        heartbeat: {
-            request: true
-        }
+        type: 'heartbeat',
+        request: true
     });
 };
 
 Peer.prototype._onheartbeat = function(msg) {
     var self = this;
-    if (msg.heartbeat.request) {
+    if (msg.request) {
         self.send({
-            heartbeat: {
-                response: true
-            }
+            type: 'heartbeat',
+            response: true
         });
-    } else if (msg.heartbeat.response) {
+    } else if (msg.response) {
         // we received a response in time
         clearTimeout(self._heartbeatTimer);
         setTimeout(function() {

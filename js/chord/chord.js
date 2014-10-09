@@ -266,7 +266,7 @@ Chord.prototype.addPeer = function(peer, callback) {
 };
 
 Chord.prototype.removePeer = function(peer) {
-    console.log('peer not reachable:', peer.id.toString());
+    this.log('peer not reachable:', peer.id.toString());
     //delete this._remotes[peer.id.toString()];
 };
 
