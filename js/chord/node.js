@@ -307,19 +307,6 @@ ChordNode.prototype = {
 
     _onmessage: function(msg) {
         var cb = this._pending[msg.seqnr];
-        var arr = [msg.type];
-        if (msg.payload && msg.payload.type) {
-            arr.push(msg.payload.type);
-            if (msg.payload.from) {
-                arr.push(msg.payload.from);
-            }
-            if (msg.payload.seqnr) {
-                arr.push(msg.payload.seqnr);
-            }
-            if (msg.payload.payload && msg.payload.payload.type) {
-                arr.push(msg.payload.payload.type);
-            }
-        }
         // if we find a callback this message is a response to a request of ours
         if (typeof(cb) === 'function') {
             this._handle_response(msg, cb);
