@@ -225,7 +225,11 @@ ChordNode.prototype = {
 
     _update_predecessor: function(id, seqnr) {
         var self = this;
-        self._chord._localNode._predecessor = id;
+        self.log('updating my predecessor to ' + id.toString());
+        // we got an id with a new predecessor. connect to it now 
+        self._chord.connect(id, function(err, chordNode) {
+            self._chord._localNode._predecessor = chordNode;
+        });
         self._send({
             type: self.message_types.ACK,
             seqnr: seqnr
@@ -235,7 +239,10 @@ ChordNode.prototype = {
     _update_successor: function(id, seqnr) {
         var self = this;
         self.log("updating my successor to " + id.toString());
-        self._chord._localNode._successor = id;
+        // we got an id with a new successor. connect to it now 
+        self._chord.connect(id, function(err, chordNode) {
+            self._chord._localNode._successor = chordNode;
+        });
         self._send({
             type: self.message_types.ACK,
             seqnr: seqnr
