@@ -151,11 +151,13 @@ Chord.prototype.join = function(bootstrap_id, callback) {
     }
     self._joining = true;
     self.connect(bootstrap_id, function(err, bootstrapNode) {
+        self.log('my bootstrap node is ' + bootstrap_id.toString());
         if (err) {
             callback(err);
             return;
         }
         bootstrapNode.find_successor(self._localNode._peer.id, function(err, successor) {
+            self.log("my successor is " + successor.toString());
             if (err) {
                 callback(err);
                 return;
