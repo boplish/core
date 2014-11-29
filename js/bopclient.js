@@ -58,13 +58,12 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
         errorCallback('Failed to open connection to bootstrap server:' + bootstrapHost + ': ' + ev);
     };
 
+    this._connectionManager = new ConnectionManager();
+    this._router = new Router(id, channel, this._connectionManager);
+
     channel.onopen = function() {
         this._connectionManager.bootstrap(this._router, _authBopId.bind(this), errorCallback);
     }.bind(this);
-
-    this._connectionManager = new ConnectionManager();
-    this._connectionManager.onconnection = this._onconnection.bind(this);
-    this._router = new Router(id, channel, this._connectionManager);
 
     function _authBopId() {
         // creating a random bopid (for now) and store it in the dht
@@ -98,39 +97,35 @@ BOPlishClient.prototype = {
     registerProtocol: function(protocolIdentifier) {
         var self = this;
         var protocol = {
-            identifier: protocolIdentifier,
-            bopid: self.bopid,
-            connect: function(bopid, callback) {
-                // TODO
-                // 1. Über ConnectionManager Verb. aufbauen
-                // 2. Protokoll aushandeln
-                // 3. Übergabe an Protokoll-Impl. beim Remote ankündigen
-                // 4. callback mit DC aufrufen
+            bopid: this.bopid,
+            send: function(bopuri, msg) {
+                if (!msg) {
+                    throw new Error('Trying to send empty message');
+                }
+
+                self._send(bopuri, protocolIdentifier, msg);
             }
         };
+        this._router.registerDeliveryCallback(protocolIdentifier, function(msg) {
+            if (typeof protocol.onmessage === "function") {
+                protocol.onmessage(msg.from, msg.payload);
+            }
+        });
         return protocol;
-    },
-
-    _onconnection: function(dc) {
-        // TODO
-        // 1. Protokoll aushandeln
-        // 2. Auf Übergabe des DC der Remote-Seite an die Protokoll-Instanz
-        //    warten
-        // 3. DC an passende lokale Protokoll-Instanz übergeben
     },
 
     /**
      * todo
      *
      */
-    _send: function(bopuri, callback) {
+    _send: function(bopid, protocolIdentifier, msg) {
         msg = {
-            payload: {},
-            uri: bopuri.toString(),
+            payload: msg,
+            to: bopid,
             from: this.bopid,
-            type: bopuri.protocol
+            type: protocolIdentifier
         };
-        var bopidHash = sha1.bigIntHash(bopuri.uid);
+        var bopidHash = sha1.bigIntHash(bopid);
 
         this._router.get(bopidHash, function(err, auth) {
             if (err) {
