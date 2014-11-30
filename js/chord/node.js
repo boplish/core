@@ -71,25 +71,16 @@ ChordNode.prototype = {
         }
     },
 
-    find_successor: function(id, cb) {
-        var self = this;
-        self.log("finding successor of", id);
-        this._send_request({
-            type: this.message_types.FIND_SUCCESSOR,
-            id: id.toString()
-        }, function(err, msg) {
-            self.log(JSON.stringify(msg));
-            cb(null, new BigInteger(msg.successor));
-        });
-    },
-
     find_predecessor: function(id, cb) {
         var self = this;
         this._send_request({
             type: this.message_types.FIND_PREDECESSOR,
             id: id.toString()
         }, function(err, msg) {
-            cb(null, new BigInteger(msg.predecessor));
+            cb(null, {
+                successor: new BigInteger(msg.res.successor),
+                predecessor: new BigInteger(msg.res.predecessor)
+            });
         });
     },
 
@@ -171,24 +162,15 @@ ChordNode.prototype = {
         }
     },
 
-    _find_successor: function(id, seqnr) {
-        var self = this;
-        this._chord.find_successor(id, function(err, res) {
-            var msg = {
-                type: self.message_types.SUCCESSOR,
-                successor: res.toString(),
-                seqnr: seqnr
-            };
-            self._send(msg);
-        });
-    },
-
     _find_predecessor: function(id, seqnr) {
         var self = this;
         this._chord.find_predecessor(id, function(err, res) {
             var msg = {
                 type: self.message_types.PREDECESSOR,
-                predecessor: res.toString(),
+                res: {
+                    successor: res.successor.toString(),
+                    predecessor: res.predecessor.toString()
+                },
                 seqnr: seqnr
             };
             self._send(msg);

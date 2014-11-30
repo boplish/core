@@ -133,13 +133,13 @@ Chord.prototype.join = function(bootstrap_id, callback) {
             callback(err);
             return;
         }
-        bootstrapNode.find_successor(self._localNode.id(), function(err, successor) {
-            self.log("my successor is " + successor.toString());
+        bootstrapNode.find_predecessor(self._localNode.id(), function(err, res) {
+            self.log("my successor is " + res.successor.toString());
             if (err) {
                 callback(err);
                 return;
             }
-            self.connect(successor, function(err, successorNode) {
+            self.connect(res.successor, function(err, successorNode) {
                 if (err) {
                     callback(err);
                     return;
@@ -160,12 +160,12 @@ Chord.prototype.updateSuccessorList = function(cb) {
     var self = this;
     var newSuccessorList = [];
     // fill up successorList with the next two peers behind successor
-    self.find_successor(self._localNode.successor_id().plus(1), function(err, suc_suc_id) {
+    self.find_successor(self._localNode.successor_id().plus(1), function(err, res) {
         if (!err) {
-            newSuccessorList.push(suc_suc_id);
-            self.find_successor(suc_suc_id.plus(1), function(err, suc_suc_suc_id) {
+            newSuccessorList.push(res.successor);
+            self.find_successor(res.successor.plus(1), function(err, res) {
                 if (!err) {
-                    newSuccessorList.push(suc_suc_suc_id);
+                    newSuccessorList.push(res.successor);
                     self._successorList = newSuccessorList;
                     cb(null, self._successorList);
                 } else {
@@ -183,25 +183,31 @@ Chord.prototype._addRemote = function(node) {
 };
 
 Chord.prototype.find_successor = function(id, callback) {
-    var self = this;
-
-    if (self._localNode.responsible(id)) {
-        callback(null, self._localNode.id());
-    } else if (Range.inRightClosedInterval(id, self._localNode.id(), self._localNode.successor_id())) {
-        callback(null, self._localNode.successor_id());
-    } else {
-        // @todo: use finger table to route further
-        self._localNode._successor.find_successor(id, callback);
-    }
+    //     var self = this;
+    this.find_predecessor(id, callback)
+    //     if (self._localNode.responsible(id)) {
+    //         callback(null, self._localNode.id());
+    //     } else if (Range.inRightClosedInterval(id, self._localNode.id(), self._localNode.successor_id())) {
+    //         callback(null, self._localNode.successor_id());
+    //     } else {
+    //         // @todo: use finger table to route further
+    //         self._localNode._successor.find_successor(id, callback);
+    //     }
 };
 
 Chord.prototype.find_predecessor = function(id, callback) {
     var self = this;
 
     if (Range.inRightClosedInterval(id, self._localNode.id(), self._localNode.successor_id())) {
-        callback(null, self._localNode.id());
+        callback(null, {
+            predecessor: self._localNode.id(),
+            successor: self._localNode.successor_id()
+        });
     } else if (self._localNode.responsible(id)) {
-        callback(null, self._localNode.predecessor_id());
+        callback(null, {
+            predecessor: self._localNode.predecessor_id(),
+            successor: self._localNode.id()
+        });
     } else {
         // @todo: use finger table to route further
         self._localNode._successor.find_predecessor(id, callback);
@@ -292,10 +298,10 @@ Chord.prototype.stabilize = function() {
             } else {
                 // successor is up, check if someone smuggeld in between (id, successor_id]
                 // or if successor.predecessor == successor (special case when predecessor is unknown)
-                self.find_predecessor(self._localNode.successor_id(), function(err, predecessorId) {
-                    if (Range.inOpenInterval(predecessorId, self._localNode.id(), self._localNode.successor_id())) {
+                self._localNode._successor.find_predecessor(self._localNode.successor_id(), function(err, res) {
+                    if (Range.inOpenInterval(res.predecessor, self._localNode.id(), self._localNode.successor_id())) {
                         self.log('we have a successor in (myId, sucId), it becomes our new successor');
-                        self.connect(predecessorId, function(err, suc_pre_node) {
+                        self.connect(res.predecessor, function(err, suc_pre_node) {
                             self._localNode._successor = suc_pre_node;
                             setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
                         });
@@ -307,6 +313,8 @@ Chord.prototype.stabilize = function() {
                 self.updateSuccessorList(function() {});
             }
         });
+    } else {
+        setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
     }
 
     // notify our successor of us
