@@ -159,12 +159,12 @@ Chord.prototype.join = function(bootstrap_id, callback) {
 Chord.prototype.updateSuccessorList = function(cb) {
     var self = this;
     var newSuccessorList = [];
-    // fill up successorList with the next two peers behind successor
+    // fill up successorList with the next two peers behind successor (if it's not me)
     self.find_successor(self._localNode.successor_id().plus(1), function(err, res) {
-        if (!err) {
+        if (!err || !res.successor.equals(self._localNode.id())) {
             newSuccessorList.push(res.successor);
             self.find_successor(res.successor.plus(1), function(err, res) {
-                if (!err) {
+                if (!err || !res.successor.equals(self._localNode.id())) {
                     newSuccessorList.push(res.successor);
                     self._successorList = newSuccessorList;
                     cb(null, self._successorList);
