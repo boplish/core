@@ -38,7 +38,6 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
     this._fingerTable = {};
     this._m = 160;
     this._joining = false;
-    this._joined = false; // are we joined to a Chord ring, yet?
     this.debug = false;
     this._successorList = [];
     this._stabilizeInterval = 1000;
