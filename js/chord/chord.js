@@ -183,16 +183,7 @@ Chord.prototype._addRemote = function(node) {
 };
 
 Chord.prototype.find_successor = function(id, callback) {
-    //     var self = this;
-    this.find_predecessor(id, callback)
-    //     if (self._localNode.responsible(id)) {
-    //         callback(null, self._localNode.id());
-    //     } else if (Range.inRightClosedInterval(id, self._localNode.id(), self._localNode.successor_id())) {
-    //         callback(null, self._localNode.successor_id());
-    //     } else {
-    //         // @todo: use finger table to route further
-    //         self._localNode._successor.find_successor(id, callback);
-    //     }
+    this.find_predecessor(id, callback);
 };
 
 Chord.prototype.find_predecessor = function(id, callback) {
