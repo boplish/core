@@ -51,10 +51,6 @@ describe('Application', function() {
 
             proto.should.be.an.Object;
         });
-        it('should save the callback', function() {
-            var proto = bc.registerProtocol(protoIdentifier);
-            proto.should.have.property("identifier").equal(protoIdentifier);
-        });
         describe('boplish-protocol', function() {
             var testMsg = {
                 testmsg: 'test'
@@ -63,8 +59,7 @@ describe('Application', function() {
             it('should carry the correct properties', function() {
                 var proto = bc.registerProtocol(protoIdentifier);
 
-                proto.should.have.property('identifier', protoIdentifier);
-                proto.should.have.property('onmessage').and.be.an.Function;
+                proto.should.have.property('bopid', bc.bopid);
                 proto.should.have.property('send').and.be.an.Function;
             });
             it('should fail on malformed BOPUri');

@@ -40,7 +40,7 @@ describe('Router', function() {
             router.addPeer(peer1);
             router.addPeer(peer2);
 
-            sinon.assert.calledTwice(stub); // 1*heartbeat; 1*discovery
+            sinon.assert.calledOnce(stub);
         });
     });
     describe('#getPeerIds()', function() {
@@ -109,8 +109,8 @@ describe('Router', function() {
                 }
             };
             router.route('2', testMsg);
-            // once for heartbeat, twice for discovery, thrice for actual routing of the msg
-            sinon.assert.calledThrice(stub);
+            // twice for discovery, thrice for actual routing of the msg
+            sinon.assert.calledTwice(stub);
         });
         it('should route messages to unknown peers via fallback channel', function() {
             var ws = {
