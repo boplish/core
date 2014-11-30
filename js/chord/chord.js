@@ -160,11 +160,11 @@ Chord.prototype.updateSuccessorList = function(cb) {
     var self = this;
     var newSuccessorList = [];
     // fill up successorList with the next two peers behind successor (if it's not me)
-    self._localNode._successor.find_successor(self._localNode.successor_id().plus(1), function(err, res) {
+    self._localNode._successor.find_predecessor(self._localNode.successor_id().plus(1), function(err, res) {
         if (!err && !res.successor.equals(self._localNode.id())) {
             newSuccessorList.push(res.successor);
             self._successorList = newSuccessorList;
-            self._localNode._successor.find_successor(res.successor.plus(1), function(err, res) {
+            self._localNode._successor.find_predecessor(res.successor.plus(1), function(err, res) {
                 if (!err && !res.successor.equals(self._localNode.id())) {
                     newSuccessorList.push(res.successor);
                     self._successorList = newSuccessorList;
@@ -305,12 +305,11 @@ Chord.prototype.stabilize = function() {
                 self.updateSuccessorList(function() {});
             }
         });
+        // notify our successor of us
+        self._localNode._successor.notify(self._localNode.id(), function() {});
     } else {
         setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
     }
-
-    // notify our successor of us
-    self._localNode._successor.notify(self._localNode.id(), function() {});
 };
 
 
