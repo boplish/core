@@ -31,13 +31,13 @@ describe('ConnectionManager', function() {
         it('should register the correct callbacks', function() {
             var mockRouter = sinon.mock(RouterAPI);
             mockRouter.expects("registerDeliveryCallback").withArgs('signaling-protocol');
-            cm.bootstrap(RouterAPI);
+            cm.bootstrap(RouterAPI, function(){}, function(){});
             mockRouter.restore();
         });
         it('should route the initial offer', function() {
             var mockRouter = sinon.mock(RouterAPI);
             mockRouter.expects('route').once();
-            cm.bootstrap(RouterAPI);
+            cm.bootstrap(RouterAPI, function(){}, function(){});
             mockRouter.restore();
         });
         it('should create the correct offer packet', function(done) {
@@ -55,7 +55,7 @@ describe('ConnectionManager', function() {
                     done();
                 }
             };
-            cm.bootstrap(router);
+            cm.bootstrap(router, function(){}, function(){});
         });
         it('should allow being called twice', function(done) {
             var router = {
@@ -78,10 +78,10 @@ describe('ConnectionManager', function() {
                 }
             };
             var called = 0;
-            cm.bootstrap(router, function() {
+            cm.bootstrap(router, function() {}, function(){
                 called += 1;
             });
-            cm.bootstrap(router, function() {
+            cm.bootstrap(router, function() {}, function(){
                 if (called == 1) {
                     done();
                 }

@@ -64,6 +64,9 @@ ChordNode.prototype = {
     },
 
     successor_id: function() {
+        if (this._successor === null) {
+            return this.id();
+        }
         if (this._successor instanceof ChordNode) {
             return this._successor._peer.id;
         } else {
@@ -77,10 +80,14 @@ ChordNode.prototype = {
             type: this.message_types.FIND_PREDECESSOR,
             id: id.toString()
         }, function(err, msg) {
-            cb(null, {
-                successor: new BigInteger(msg.res.successor),
-                predecessor: new BigInteger(msg.res.predecessor)
-            });
+            if (!err && msg && msg.res) {
+                cb(null, {
+                    successor: new BigInteger(msg.res.successor),
+                    predecessor: new BigInteger(msg.res.predecessor)
+                });
+            } else {
+                cb(err);
+            }
         });
     },
 

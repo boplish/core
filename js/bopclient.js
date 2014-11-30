@@ -29,6 +29,10 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     } else if (typeof(bootstrapHost) !== 'string' || typeof(successCallback) !== 'function' || typeof(errorCallback) !== 'function') {
         throw new TypeError('Not enough arguments or wrong type');
     }
+    var self = this;
+
+    // specify number of joins this peer tries before erroring out
+    self.joinTrials = 3;
 
     var browser = bowser.browser;
     if (browser.firefox && browser.version >= 26) {
@@ -62,8 +66,17 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     this._router = new Router(id, channel, this._connectionManager);
 
     channel.onopen = function() {
-        this._connectionManager.bootstrap(this._router, _authBopId.bind(this), errorCallback);
-    }.bind(this);
+        (function join() {
+            self._connectionManager.bootstrap(self._router, _authBopId.bind(self), function(err) {
+                if (--self.joinTrials >= 0) {
+                    console.log('Join did not work - retrying');
+                    join();
+                } else {
+                    errorCallback('Could not join the DHT, giving up.');
+                }
+            });
+        })();
+    };
 
     function _authBopId() {
         // creating a random bopid (for now) and store it in the dht

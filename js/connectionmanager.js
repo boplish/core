@@ -168,40 +168,54 @@ ConnectionManager.prototype = {
         pending.dc.onopen = function(ev) {
             // nodejs wrtc-library does not include a channel reference in `ev.target`
             var peer = new Peer(from, pending.pc, pending.dc);
-            if (typeof(pending.callback) === 'function') {
-                // TODO(max): would it make sense to pass the remote peer's
-                // ID to the handler?
-                pending.callback(null, peer);
-            }
-            delete this._pending[message.seqnr];
+            peer.sendHeartbeat(function(err) {
+                if (typeof(pending.callback) !== 'function') {
+                    return;
+                }
+                if (err) {
+                    pending.callback(err);
+                } else {
+                    // TODO(max): would it make sense to pass the remote peer's
+                    // ID to the handler?
+                    pending.callback(null, peer);
+                }
+                delete this._pending[message.seqnr];
+            }.bind(this));
         }.bind(this);
     },
 
     _onReceiveOffer: function(message, from) {
+        var self = this;
         var desc = message.payload.offer;
-        var offerId = this.utils.findSessionId(desc.sdp);
-        var pc = new RTCPeerConnection(this._pcoptions);
+        var offerId = self.utils.findSessionId(desc.sdp);
+        var pc = new RTCPeerConnection(self._pcoptions);
         pc.setRemoteDescription(new RTCSessionDescription(desc), function() {}, function(err) {
             console.error("could not set remote description", err);
         });
-        if (this._pending[message.seqnr]) {
-            this._pending[message.seqnr].pc = pc;
+        if (self._pending[message.seqnr]) {
+            self._pending[message.seqnr].pc = pc;
         }
         pc.ondatachannel = function(ev) {
             ev.channel.onopen = function(ev2) {
                 // nodejs wrtc-library does not include a channel reference in `ev2.target`
                 var peer = new Peer(from, pc, ev.channel);
-                this._router.addPeer(peer, function(err) {
-                    if (this._pending[message.seqnr]) {
-                        if (typeof(this._pending[message.seqnr].callback) === 'function') {
-                            this._pending[message.seqnr].callback(err, peer);
-                        }
-                        delete this._pending[message.seqnr];
+                peer.sendHeartbeat(function(err) {
+                    if (err) {
+                        self._pending[message.seqnr].callback(err);
+                    } else {
+                        self._router.addPeer(peer, function(err) {
+                            if (self._pending[message.seqnr]) {
+                                if (typeof(self._pending[message.seqnr].callback) === 'function') {
+                                    self._pending[message.seqnr].callback(err, peer);
+                                }
+                                delete self._pending[message.seqnr];
+                            }
+                        });
                     }
-                }.bind(this));
-            }.bind(this);
-        }.bind(this);
-        pc.createAnswer(this._onCreateAnswerSuccess.bind(this, from, pc, message.seqnr), this._onCreateAnswerError.bind(this));
+                });
+            };
+        };
+        pc.createAnswer(self._onCreateAnswerSuccess.bind(self, from, pc, message.seqnr), self._onCreateAnswerError.bind(self));
     },
 
     _onCreateAnswerSuccess: function(to, pc, seqnr, sessionDesc) {
