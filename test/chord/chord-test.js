@@ -60,13 +60,11 @@ describe('Chord', function() {
             c.should.have.property('_localNode');
             c._localNode.should.be.an.instanceof(ChordNode);
 
-            assert(c.id.equals(new BigInteger(5)));
+            assert(c.id.equals(new BigInteger(5))); // how does this work??
         });
-        it('should start with itself as successor and predecessor', function() {
+        it('should start with successor set to myself and predecessor set to null', function() {
             c._localNode._successor.should.equal(c._localNode);
-            c._localNode._predecessor.should.equal(c._localNode);
-            assert.equal(c._localNode.successor_id(), c.id);
-            assert.equal(c._localNode.predecessor_id(), c.id);
+            assert.equal(c._localNode._predecessor, null);
             assert.equal(c._localNode._peer._dataChannel, dcStub);
         });
         it('should initialize finger table', function() {
@@ -106,6 +104,111 @@ describe('Chord', function() {
             assert.ok(cm.connect.calledOnce);
             assert.ok(cm.connect.args[0][0].equals(new BigInteger(1)));
             cm.connect.restore();
+        });
+    });
+    describe('#responsible', function() {
+        it('should return true for my id', function() {
+            c._localNode.responsible(c._localNode.id()).should.be.ok;
+        });
+        it('should handle (preId, myId] when predecessor is set', function() {
+            c._localNode._predecessor = new ChordNode(new Peer(c._localNode.id().plus(10), null, dcStub), c, false);
+            c._localNode.responsible(c._localNode.id()).should.be.ok;
+            c._localNode.responsible(c._localNode.id().plus(1)).should.not.be.ok;
+            c._localNode.responsible(c._localNode.predecessor_id()).should.not.be.ok;
+            c._localNode.responsible(c._localNode.predecessor_id().plus(1)).should.be.ok;
+        });
+        it('should handle wrap around', function() {
+            c._localNode._predecessor = new ChordNode(new Peer(c._localNode.id().plus(2), null, dcStub), c, false);
+            c._localNode.responsible(c._localNode.id()).should.be.ok;
+            c._localNode.responsible(c._localNode.id().plus(1)).should.not.be.ok;
+            c._localNode.responsible(c._localNode.id().plus(2)).should.not.be.ok;
+            c._localNode.responsible(c._localNode.id().plus(3)).should.be.ok;
+        });
+    });
+    describe('#localFindOperations', function() {
+        it('should locally find correct successor', function() {
+            c._localNode._predecessor = new ChordNode(new Peer(c._localNode.id().minus(10), null, dcStub), c, false);
+            c._localNode._successor = new ChordNode(new Peer(c._localNode.id().plus(10), null, dcStub), c, false);
+            c.find_successor(c._localNode.id(), function(err, id) {
+                assert.equal(err, null);
+                id.should.equal(c._localNode.id());
+            });
+            c.find_successor(c._localNode.successor_id(), function(err, id) {
+                assert.equal(err, null);
+                id.should.equal(c._localNode.successor_id());
+            });
+            c.find_successor(c._localNode.id().plus(3), function(err, id) {
+                assert.equal(err, null);
+                id.should.equal(c._localNode.successor_id());
+            });
+            c.find_successor(c._localNode.id().minus(3), function(err, id) {
+                assert.equal(err, null);
+                id.should.equal(c._localNode.id());
+            });
+        });
+        it('should locally find correct predecessor', function() {
+            c._localNode._predecessor = new ChordNode(new Peer(c._localNode.id().minus(10), null, dcStub), c, false);
+            c._localNode._successor = new ChordNode(new Peer(c._localNode.id().plus(10), null, dcStub), c, false);
+            c.find_predecessor(c._localNode.id(), function(err, id) {
+                assert.equal(err, null);
+                id.should.equal(c._localNode.predecessor_id());
+            });
+            c.find_predecessor(c._localNode.successor_id(), function(err, id) {
+                assert.equal(err, null);
+                id.should.equal(c._localNode.id());
+            });
+            c.find_predecessor(c._localNode.id().plus(3), function(err, id) {
+                assert.equal(err, null);
+                id.should.equal(c._localNode.id());
+            });
+            c.find_predecessor(c._localNode.id().minus(3), function(err, id) {
+                assert.equal(err, null);
+                id.should.equal(c._localNode.predecessor_id());
+            });
+        });
+        it('should handle edge case: predecessor unset', function() {
+            c._localNode._predecessor = null;
+            c._localNode._successor = new ChordNode(new Peer(c._localNode.id().plus(10), null, dcStub), c, false);
+            c.find_successor(c._localNode.id(), function(err, id) {
+                assert.equal(err, null);
+                id.should.equal(c._localNode.id());
+            });
+            c.find_successor(c._localNode.predecessor_id(), function(err, id) {
+                assert.equal(err, null);
+                id.should.equal(c._localNode.id());
+            });
+            c.find_predecessor(c._localNode.id(), function(err, id) {
+                assert.equal(err, null);
+                id.should.equal(c._localNode.id());
+            });
+            c.find_predecessor(c._localNode.successor_id(), function(err, id) {
+                assert.equal(err, null);
+                id.should.equal(c._localNode.id());
+            });
+        });
+        it('should handle edge case: i am my successor, predecessor unset', function() {
+            c._localNode._predecessor = null;
+            c._localNode._successor = new ChordNode(new Peer(c._localNode.id(), null, dcStub), c, false);
+            c.find_successor(c._localNode.id(), function(err, id) {
+                assert.equal(err, null);
+                id.should.equal(c._localNode.id());
+            });
+            c.find_successor(c._localNode.id().plus(3), function(err, id) {
+                assert.equal(err, null);
+                id.should.equal(c._localNode.id());
+            });
+            c.find_successor(c._localNode.id().minus(3), function(err, id) {
+                assert.equal(err, null);
+                id.should.equal(c._localNode.id());
+            });
+            c.find_predecessor(c._localNode.id().plus(3), function(err, id) {
+                assert.equal(err, null);
+                id.should.equal(c._localNode.id());
+            });
+            c.find_predecessor(c._localNode.id().minus(3), function(err, id) {
+                assert.equal(err, null);
+                id.should.equal(c._localNode.id());
+            });
         });
     });
 });

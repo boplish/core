@@ -18,14 +18,8 @@ var Peer = function(id, peerConnection, dataChannel) {
     this._peerConnection = peerConnection;
     this._dataChannel = dataChannel;
     this._dataChannel.onmessage = this._onmessage.bind(this);
-    this._heartbeatTimeout = 500;
-    this._heartbeatInterval = 5000;
-    this._heartbeatTimer = null;
-    if (dataChannel instanceof WebSocket) {
-        // fallback signaling, we dont need heartbeats for that
-    } else {
-        this._sendHeartbeat();
-    }
+    this._heartbeatDefaultTimer = 500; // default heartbeat timer
+    this._heartbeatCallbacks = {};
 };
 
 Peer.prototype.send = function(msg) {
@@ -59,11 +53,24 @@ Peer.prototype.onclose = function() {
     // overwrite
 };
 
-Peer.prototype._sendHeartbeat = function() {
-    this.send({
-        type: 'heartbeat',
-        request: true
-    });
+Peer.prototype.sendHeartbeat = function(cb, timeout) {
+    var self = this;
+    var randomnumber = Math.floor(Math.random() * 100001);
+    self._heartbeatCallbacks[randomnumber] = cb;
+    try {
+        self.send({
+            type: 'heartbeat',
+            request: true,
+            sqnr: randomnumber
+        });
+    } catch (e) {
+        // sweep this under the table as the error is handled by the timeout
+    }
+    setTimeout(function() {
+        if (self._heartbeatCallbacks[randomnumber]) {
+            self._heartbeatCallbacks[randomnumber]('Peer unreachable');
+        }
+    }, timeout || self._heartbeatDefaultTimer);
 };
 
 Peer.prototype._onheartbeat = function(msg) {
@@ -71,18 +78,12 @@ Peer.prototype._onheartbeat = function(msg) {
     if (msg.request) {
         self.send({
             type: 'heartbeat',
-            response: true
+            response: true,
+            sqnr: msg.sqnr
         });
     } else if (msg.response) {
-        // we received a response in time
-        clearTimeout(self._heartbeatTimer);
-        setTimeout(function() {
-            self._heartbeatTimer = setTimeout(function() {
-                // timeout reached, close connection
-                self.onclose();
-            }, self._heartbeatTimeout);
-            self._sendHeartbeat();
-        }, self._heartbeatInterval);
+        self._heartbeatCallbacks[msg.sqnr]();
+        delete self._heartbeatCallbacks[msg.sqnr];
     }
 };
 

@@ -30,7 +30,7 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
 
     this._localNode = new ChordNode(new Peer(id, null, fallbackSignaling), this, true);
     this._localNode._successor = this._localNode;
-    this._localNode._predecessor = this._localNode;
+    this._localNode._predecessor = null;
     this._remotes = {};
     this._connectionManager = connectionManager;
     this._messageCallbacks = {};
@@ -40,6 +40,9 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
     this._joining = false;
     this._joined = false; // are we joined to a Chord ring, yet?
     this.debug = false;
+    this._successorList = [];
+    this._stabilizeInterval = 1000;
+    this._maxPeerConnections = 10;
 
     var memoizer = Helper.memoize(Helper.fingerTableIntervalStart.bind(this));
     for (var i = 1; i <= this._m; i++) {
@@ -88,24 +91,6 @@ var Helper = {
     }
 };
 
-/**
- * Internal API
- **/
-
-Chord.prototype._init_finger_table = function(remote, successCallback) {
-    var self = this;
-    remote.find_successor(this._fingerTable[1].start(), function(successor) {
-        self._fingerTable[1].node = successor;
-        self._localNode._predecessor = successor.predecessor;
-        self._localNode._successor.predecessor = this._localNode;
-        successCallback();
-    });
-};
-
-Chord.prototype._update_others = function() {
-    // TODO(max) implement
-};
-
 Chord.prototype._closest_preceding_finger = function(id) {
     var i;
     for (i = this._m; i >= 1; i--) {
@@ -129,14 +114,6 @@ Chord.prototype.log = function(msg) {
 };
 
 /**
- * Public API
- **/
-
-Chord.prototype.create = function(callback) {
-    callback(this._id);
-};
-
-/**
  * join the DHT by using the 'bootstrap' node
  *
  * @param bootstrap_id {BigInteger} ID of the bootstrap host
@@ -151,12 +128,12 @@ Chord.prototype.join = function(bootstrap_id, callback) {
     }
     self._joining = true;
     self.connect(bootstrap_id, function(err, bootstrapNode) {
-        self.log('my bootstrap node is ' + bootstrap_id.toString());
+        self.log("my bootstrap node is " + bootstrap_id.toString());
         if (err) {
             callback(err);
             return;
         }
-        bootstrapNode.find_successor(self._localNode._peer.id, function(err, successor) {
+        bootstrapNode.find_successor(self._localNode.id(), function(err, successor) {
             self.log("my successor is " + successor.toString());
             if (err) {
                 callback(err);
@@ -168,34 +145,36 @@ Chord.prototype.join = function(bootstrap_id, callback) {
                     return;
                 }
                 self._localNode._successor = successorNode;
-                self._localNode._successor.find_predecessor(self._localNode._peer.id, function(err, predecessor) {
-                    self.log("predecessor is " + predecessor.toString());
-                    if (err) {
-                        callback(err);
-                        return;
-                    }
-                    self._localNode._successor.update_predecessor(self._localNode.id(), function(err, res) {
-                        self.log("updated predecessor");
-                        if (err) {
-                            callback(err);
-                            return;
-                        }
-                        self.connect(predecessor, function(err, predecessorNode) {
-                            if (err) {
-                                callback(err);
-                                return;
-                            }
-                            self._localNode._predecessor = predecessorNode;
-                            self._localNode._predecessor.update_successor(self._localNode.id(), function() {
-                                self.log("updated successor");
-                                self._joining = false;
-                                callback();
-                            });
-                        });
-                    });
+
+                self.updateSuccessorList(function() {
+                    self._joining = false;
+                    setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
+                    callback();
                 });
             });
         });
+    });
+};
+
+Chord.prototype.updateSuccessorList = function(cb) {
+    var self = this;
+    var newSuccessorList = [];
+    // fill up successorList with the next two peers behind successor
+    self.find_successor(self._localNode.successor_id().plus(1), function(err, suc_suc_id) {
+        if (!err) {
+            newSuccessorList.push(suc_suc_id);
+            self.find_successor(suc_suc_id.plus(1), function(err, suc_suc_suc_id) {
+                if (!err) {
+                    newSuccessorList.push(suc_suc_suc_id);
+                    self._successorList = newSuccessorList;
+                    cb(null, self._successorList);
+                } else {
+                    cb(err);
+                }
+            });
+        } else {
+            cb(err);
+        }
     });
 };
 
@@ -205,30 +184,27 @@ Chord.prototype._addRemote = function(node) {
 
 Chord.prototype.find_successor = function(id, callback) {
     var self = this;
+
     if (self._localNode.responsible(id)) {
-        self.log("It is me");
         callback(null, self._localNode.id());
-    } else if (Range.inLeftClosedInterval(id, self._localNode.id(), self._localNode.successor_id())) {
-        self._localNode.successor(function(err, successorNode) {
-            callback(null, successorNode.id());
-        });
+    } else if (Range.inRightClosedInterval(id, self._localNode.id(), self._localNode.successor_id())) {
+        callback(null, self._localNode.successor_id());
     } else {
-        self._localNode.successor(function(err, successorNode) {
-            successorNode.find_successor(id, callback);
-        });
+        // @todo: use finger table to route further
+        self._localNode._successor.find_successor(id, callback);
     }
 };
 
 Chord.prototype.find_predecessor = function(id, callback) {
     var self = this;
-    if (self._localNode.id().equals(self._localNode.successor_id()) || Range.inLeftClosedInterval(id, self._localNode.id(), self._localNode.successor_id())) {
+
+    if (Range.inRightClosedInterval(id, self._localNode.id(), self._localNode.successor_id())) {
         callback(null, self._localNode.id());
     } else if (self._localNode.responsible(id)) {
         callback(null, self._localNode.predecessor_id());
     } else {
-        self._localNode.successor(function(err, successorNode) {
-            successorNode.find_predecessor(id, callback);
-        });
+        // @todo: use finger table to route further
+        self._localNode._successor.find_predecessor(id, callback);
     }
 };
 
@@ -249,6 +225,15 @@ Chord.prototype.connect = function(id, callback) {
 };
 
 Chord.prototype.addPeer = function(peer, callback) {
+    // keep length of remotes low, if bigger than x, delete one if its not succ or pre
+    if (this._remotes.length >= this._maxPeerConnections) {
+        var keys = Obect.keys(this._remotes);
+        var node = this._remotes[keys[keys.length * Math.random() << 0]];
+        if (!node.equals(this._localNode._successor) && !node.equals(this._localNode._predecessor)) {
+            node._peer._peerConnection.close();
+            delete this._remotes[node];
+        }
+    }
     this._remotes[peer.id.toString()] = new ChordNode(peer, this, false);
     // TODO: what if we already have a node with this ID?
     if (Object.keys(this._remotes).length === 1 && !this._joining) {
@@ -263,14 +248,71 @@ Chord.prototype.addPeer = function(peer, callback) {
     } else {
         callback();
     }
-    peer.onclose = this.removePeer.bind(this, peer);
-    // TODO: update finger table ()
 };
 
 Chord.prototype.removePeer = function(peer) {
-    this.log('peer not reachable:', peer.id.toString());
-    //delete this._remotes[peer.id.toString()];
+    delete this._remotes[peer.id()];
 };
+
+Chord.prototype.stabilize = function() {
+    var self = this;
+
+    // check if pre is still up if it's not unset
+    if (!self._localNode.predecessor_id().equals(self._localNode.id())) {
+        self._localNode._predecessor._peer.sendHeartbeat(function(err) {
+            if (err) {
+                self.log('predecessor down - removed it');
+                // just remove it if its gone, someone else will update ours
+                self._localNode._predecessor = null;
+            }
+        });
+    }
+
+    // check if successor is still up if it's not me and update succesor list
+    if (!self._localNode.successor_id().equals(self._localNode.id())) {
+        self._localNode._successor._peer.sendHeartbeat(function(err) {
+            if (!!err && self._successorList.length <= 0) {
+                // successor failed, we're fucked
+                // @todo: need to wait for another peer to connect
+                self._localNode._successor = self._localNode;
+                setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
+            } else if (!!err && self._successorList.length > 0) {
+                // successor failed, we can recover using the successor list
+                var new_suc_id = self._successorList[Math.floor(Math.random() * self._successorList.length)];
+                self.log('successor down, trying to recover using', new_suc_id.toString());
+                self.connect(new_suc_id, function(err, newSuccessorNode) {
+                    self.log('yai, we got us a new successor');
+                    // yai, we got us a new successor
+                    self._localNode._successor = newSuccessorNode;
+                    var index = self._successorList.indexOf(new_suc_id);
+                    var proposedSuccessorId = self._successorList.splice(index, 1);
+                    self.log('removed proposed successor from successorList:', proposedSuccessorId.toString());
+                    setTimeout(self.stabilize.bind(self), self._stabilizeInterval); // delay timeout until we're done connecting
+                });
+            } else {
+                // successor is up, check if someone smuggeld in between (id, successor_id]
+                // or if successor.predecessor == successor (special case when predecessor is unknown)
+                self.find_predecessor(self._localNode.successor_id(), function(err, predecessorId) {
+                    if (Range.inOpenInterval(predecessorId, self._localNode.id(), self._localNode.successor_id())) {
+                        self.log('we have a successor in (myId, sucId), it becomes our new successor');
+                        self.connect(predecessorId, function(err, suc_pre_node) {
+                            self._localNode._successor = suc_pre_node;
+                            setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
+                        });
+                    } else {
+                        setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
+                    }
+                });
+                // update successor list if everything is allright
+                self.updateSuccessorList(function() {});
+            }
+        });
+    }
+
+    // notify our successor of us
+    self._localNode._successor.notify(self._localNode.id(), function() {});
+};
+
 
 /**
  * Store 'value' under 'key' in the DHT
@@ -283,9 +325,7 @@ Chord.prototype.put = function(key, value, callback) {
         this._localNode.store(key, value);
         callback(null);
     } else {
-        this._localNode.successor(function(err, successorNode) {
-            successorNode.put(key, value, callback);
-        });
+        this._localNode._successor.put(key, value, callback);
     }
 };
 
@@ -295,9 +335,7 @@ Chord.prototype.get = function(key, callback) {
         val = this._localNode.get_from_store(key);
         callback(null, val);
     } else {
-        this._localNode.successor(function(err, successorNode) {
-            successorNode.get(key, callback);
-        });
+        this._localNode._successor.get(key, callback);
     }
 };
 
@@ -316,7 +354,7 @@ Chord.prototype.route = function(to, message, callback) {
             this._messageCallbacks[message.type](message);
             callback(null);
         } catch (e) {
-            this.log('Error handling message: ', e);
+            this.log("Error handling message: ", e);
             callback("Error handling message: " + e);
         }
     } else if (Range.inOpenInterval(to, this._localNode.predecessor_id(), this.id)) {
@@ -329,10 +367,8 @@ Chord.prototype.route = function(to, message, callback) {
             this._localNode.route(to, message, callback);
         } else {
             console.log("asking successor to route message to " + to.toString());
-            this._localNode.successor(function(err, successorNode) {
-                this.log("routing (" + [message.type, message.payload.type, message.seqnr].join(", ") + ") to " + successorNode.id().toString());
-                successorNode.route(to, message, callback);
-            }.bind(this));
+            this._localNode._successor.route(to, message, callback);
+            this.log("routing (" + [message.type, message.payload.type, message.seqnr].join(", ") + ") to " + this._localNode.successor_id().toString());
         }
     }
 };

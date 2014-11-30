@@ -32,13 +32,9 @@ ChordNode.prototype = {
 
     message_types: {
         FIND_SUCCESSOR: "FIND_SUCCESSOR",
-        SUCCESSOR: "SUCCESSOR",
         FIND_PREDECESSOR: "FIND_PREDECESSOR",
         PREDECESSOR: "PREDECESSOR",
-        GET_NODE_ID: "GET_NODE_ID",
-        NODE_ID: "NODE_ID",
-        UPDATE_PREDECESSOR: "UPDATE_PREDECESSOR",
-        UPDATE_SUCCESSOR: "UPDATE_SUCCESSOR",
+        NOTIFY: "NOTIFY",
         ACK: "ACK",
         PUT: "PUT",
         GET: "GET",
@@ -49,29 +45,29 @@ ChordNode.prototype = {
     toString: function() {
         var succ_id = this.successor_id();
         var pred_id = this.predecessor_id();
-        return "[" + this._peer.id.toString() + "," + (succ_id ? succ_id.toString() : "") + "," + (pred_id ? pred_id.toString() : "") + "]";
+        return "[" + this.id() + "," + (succ_id ? succ_id.toString() : "") + "," + (pred_id ? pred_id.toString() : "") + "]";
     },
 
     id: function() {
         return this._peer.id;
     },
 
-    successor: function(cb) {
-        var self = this;
-        self.log("What is my successor?");
-        if (self._successor.hasOwnProperty && self._successor.hasOwnProperty("_peer")) {
-            self.log("I know my successor");
-            cb(null, self._successor);
-            return;
+    predecessor_id: function() {
+        if (this._predecessor === null) {
+            return this.id();
+        }
+        if (this._predecessor instanceof ChordNode) {
+            return this._predecessor._peer.id;
         } else {
-            self.log("Gotta connect to my successor");
-            self._chord.connect(self.successor_id(), function(err, successorNode) {
-                if (err) {
-                    throw err;
-                }
-                cb(null, successorNode);
-                return;
-            });
+            throw new Error("Predecessor is not a ChordNode");
+        }
+    },
+
+    successor_id: function() {
+        if (this._successor instanceof ChordNode) {
+            return this._successor._peer.id;
+        } else {
+            throw new Error("Successor is not a ChordNode");
         }
     },
 
@@ -97,50 +93,26 @@ ChordNode.prototype = {
         });
     },
 
-    update_predecessor: function(id, cb) {
+    notify: function(id, cb) {
         var self = this;
         this._send_request({
-            type: this.message_types.UPDATE_PREDECESSOR,
+            type: this.message_types.NOTIFY,
             id: id.toString()
         }, function(err, msg) {
             cb(null, null);
         });
-    },
-
-    update_successor: function(id, cb) {
-        var self = this;
-        this._send_request({
-            type: this.message_types.UPDATE_SUCCESSOR,
-            id: id.toString()
-        }, function(err, msg) {
-            cb(null, null);
-        });
-    },
-
-    predecessor_id: function() {
-        if (this._predecessor === null) {
-            throw new Error("No predecessor");
-        }
-        if (this._predecessor.hasOwnProperty("_peer")) {
-            return this._predecessor._peer.id;
-        } else {
-            return this._predecessor;
-        }
-    },
-
-    successor_id: function() {
-        if (this._successor === null) {
-            throw new Error("No successor");
-        }
-        if (this._successor.hasOwnProperty("_peer")) {
-            return this._successor._peer.id;
-        } else {
-            return this._successor;
-        }
     },
 
     responsible: function(id) {
-        return this.predecessor_id().equals(this.id()) || Range.inLeftClosedInterval(id, this.predecessor_id(), this.id());
+        // I'm responsible for (predecessorId, myId]
+        // if predecessorId==null i'm not sure
+        // as inRightClosedInterval() returns false in that case
+        // @todo: what do we do if predecessorId is currently not set or set to our id? 
+        if (this.predecessor_id().equals(this.id())) {
+            return true;
+        } else {
+            return id.equals(this.id()) || Range.inRightClosedInterval(id, this.predecessor_id(), this.id());
+        }
     },
 
     put: function(key, value, callback) {
@@ -223,39 +195,27 @@ ChordNode.prototype = {
         });
     },
 
-    _update_predecessor: function(id, seqnr) {
+    _notify: function(proposedId, seqnr) {
         var self = this;
-        self.log('updating my predecessor to ' + id.toString());
-        // we got an id with a new predecessor. connect to it now 
-        self._chord.connect(id, function(err, chordNode) {
-            self._chord._localNode._predecessor = chordNode;
-        });
+
+        var myId = self._chord._localNode.id();
+        var preId = self._chord._localNode.predecessor_id();
+
+        if (proposedId.equals(preId)) {
+            self.log('not updating my predecessor');
+        } else if (preId.equals(myId) || Range.inLeftClosedInterval(proposedId, preId, myId)) {
+            self.log('updating my predecessor to ' + proposedId.toString());
+            // we got an id with a new predecessor. connect to it now 
+            self._chord.connect(proposedId, function(err, chordNode) {
+                self._chord._localNode._predecessor = chordNode;
+            });
+        } else {
+            self.log('not updating my predecessor');
+        }
         self._send({
             type: self.message_types.ACK,
             seqnr: seqnr
         });
-    },
-
-    _update_successor: function(id, seqnr) {
-        var self = this;
-        self.log("updating my successor to " + id.toString());
-        // we got an id with a new successor. connect to it now 
-        self._chord.connect(id, function(err, chordNode) {
-            self._chord._localNode._successor = chordNode;
-        });
-        self._send({
-            type: self.message_types.ACK,
-            seqnr: seqnr
-        });
-    },
-
-    _send_node_id: function(seqnr) {
-        var msg = {
-            type: this.message_types.NODE_ID,
-            id: this._peer.id.toString(),
-            seqnr: seqnr
-        };
-        this._send(msg);
     },
 
     _put: function(key, value, seqnr) {
@@ -351,14 +311,8 @@ ChordNode.prototype = {
             case this.message_types.FIND_PREDECESSOR:
                 this._find_predecessor(new BigInteger(msg.id), msg.seqnr);
                 break;
-            case this.message_types.GET_NODE_ID:
-                this._send_node_id(msg.seqnr);
-                break;
-            case this.message_types.UPDATE_PREDECESSOR:
-                this._update_predecessor(new BigInteger(msg.id), msg.seqnr);
-                break;
-            case this.message_types.UPDATE_SUCCESSOR:
-                this._update_successor(new BigInteger(msg.id), msg.seqnr);
+            case this.message_types.NOTIFY:
+                this._notify(new BigInteger(msg.id), msg.seqnr);
                 break;
             default:
                 //unknown request
