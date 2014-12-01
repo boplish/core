@@ -69,7 +69,8 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
         (function join() {
             self._connectionManager.bootstrap(self._router, _authBopId.bind(self), function(err) {
                 if (--self.joinTrials >= 0) {
-                    console.log('Join did not work - waiting for stabilize and retrying in 5s');
+                    console.log('Join did not work: ', err);
+                    self._router.stabilize();
                     setTimeout(join, 5000);
                 } else {
                     errorCallback('Could not join the DHT, giving up: ' + err);

@@ -17,9 +17,10 @@ var ChordNode = function(peer, chord, localNode) {
     this._chord = chord;
     this._pending = {};
     this._seqnr = 0;
-    this.debug = false;
+    this.debug = true;
     this._localNode = !!localNode;
     this._store = {};
+    this._messageTimeout = 1000;
 
     return this;
 };
@@ -258,6 +259,12 @@ ChordNode.prototype = {
     _send_request: function(msg, cb) {
         msg.seqnr = Math.floor(Math.random() * 4294967296);
         this._pending[msg.seqnr] = cb;
+        setTimeout(function() {
+            if (this._pending[msg.seqnr]) {
+                msg.error = 'Timed out';
+                this._handle_response(msg, cb);
+            }
+        }.bind(this), this._messageTimeout);
         this._send(msg);
     },
 

@@ -153,10 +153,9 @@ Chord.prototype.join = function(bootstrap_id, callback) {
                     self.updateSuccessorList(function(err) {
                         self._joining = false;
                         if (err) {
-                            callback("Could not fetch successorList");
-                        } else {
-                            self._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
+                            callback("Could not fetch successorList " + err);
                         }
+                        self._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
                     });
                 }
             });
@@ -208,6 +207,9 @@ Chord.prototype.find_predecessor = function(id, callback) {
             predecessor: self._localNode.predecessor_id(),
             successor: self._localNode.id()
         });
+        // } else if (self._localNode.id().equals(self._localNode.successor_id())) {
+        //     // inconsistent successor pointer, cannot answer
+        //     callback('Inconsistent successor pointer');
     } else {
         // @todo: use finger table to route further
         self._localNode._successor.find_predecessor(id, callback);
@@ -267,6 +269,7 @@ Chord.prototype.removePeer = function(peer) {
 
 Chord.prototype.stabilize = function() {
     var self = this;
+    self._stabilizeTimer = clearTimeout(self._stabilizeTimer);
 
     // check if pre is still up if it's not unset
     if (!self._localNode.predecessor_id().equals(self._localNode.id())) {
@@ -289,20 +292,24 @@ Chord.prototype.stabilize = function() {
                 self._remotes = {};
                 self._localNode._successor = self._localNode;
                 self._localNode._predecessor = null;
-                this._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
+                self._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
                 return;
             } else if (!!err && self._successorList.length > 0) {
                 // successor failed, we can recover using the successor list
                 var new_suc_id = self._successorList[Math.floor(Math.random() * self._successorList.length)];
                 self.log('successor down, trying to recover using', new_suc_id.toString());
                 self.connect(new_suc_id, function(err, newSuccessorNode) {
-                    self.log('yai, we got us a new successor');
-                    // yai, we got us a new successor
-                    self._localNode._successor = newSuccessorNode;
+                    if (!err) {
+                        self.log('yai, we got us a new successor');
+                        self._localNode._successor = newSuccessorNode;
+                    } else {
+                        self.log('successor in successorList is down');
+                    }
+                    // remove the id from successorList as it either failed or is our successor now
                     var index = self._successorList.indexOf(new_suc_id);
                     var proposedSuccessorId = self._successorList.splice(index, 1);
                     self.log('removed proposed successor from successorList:', proposedSuccessorId.toString());
-                    this._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
+                    self._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
                 });
             } else {
                 // successor is up, check if someone smuggled in between (id, successor_id]
@@ -311,15 +318,17 @@ Chord.prototype.stabilize = function() {
                     if (!err && Range.inOpenInterval(res.predecessor, self._localNode.id(), self._localNode.successor_id())) {
                         self.log('we have a successor in (myId, sucId), it becomes our new successor');
                         self.connect(res.predecessor, function(err, suc_pre_node) {
-                            self._localNode._successor = suc_pre_node;
-                            this._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
+                            if (!err) {
+                                self._localNode._successor = suc_pre_node;
+                            }
+                            self._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
                         });
                     } else if (!err) {
                         self.log('nobody smuggled in');
-                        this._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
+                        self._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
                     } else {
                         self.log(err);
-                        this._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
+                        self._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
                     }
                 });
                 // update successor list if everything is allright
