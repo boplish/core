@@ -70,7 +70,7 @@ ConnectionManager.prototype = {
                     return;
                 }
             }
-            this._router.addPeer(peer, function(err) {
+            this._router.join(peer, function(err) {
                 if (err) {
                     errorCallback(err);
                     return;

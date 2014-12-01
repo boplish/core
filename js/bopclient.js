@@ -31,8 +31,10 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     }
     var self = this;
 
-    // specify number of joins this peer tries before erroring out
-    self.joinTrials = 3;
+    // when join fails, retry after 5s
+    self._joinDelay = 5000;
+    // number of retries
+    self._joinTrials = 3;
 
     var browser = bowser.browser;
     if (browser.firefox && browser.version >= 26) {
@@ -68,11 +70,12 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     channel.onopen = function() {
         (function join() {
             self._connectionManager.bootstrap(self._router, _authBopId.bind(self), function(err) {
-                if (--self.joinTrials >= 0) {
+                if (--self._joinTrials >= 0) {
                     console.log('Join did not work: ', err);
-                    self._router.stabilize();
-                    setTimeout(join, 5000);
+                    setTimeout(join, self._joinDelay);
                 } else {
+                    this._router = null;
+                    this._connectionManager = null;
                     errorCallback('Could not join the DHT, giving up: ' + err);
                 }
             });

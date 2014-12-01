@@ -41,7 +41,7 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
     this.debug = false;
     this._successorList = [];
     this._stabilizeInterval = 1000;
-    this._stabilizeTimer = null;
+    this._stabilizeTimer = setTimeout(this.stabilize.bind(this), this._stabilizeInterval);
     this._maxPeerConnections = 10;
 
     var memoizer = Helper.memoize(Helper.fingerTableIntervalStart.bind(this));
@@ -116,30 +116,29 @@ Chord.prototype.log = function(msg) {
 /**
  * join the DHT by using the 'bootstrap' node
  *
- * @param bootstrap_id {BigInteger} ID of the bootstrap host
+ * @param bootstrapPeer {Peer} Peer instance of the bootstrap host
  * @param successCallback {Chord~joinCallback} called after the join operation has been
  * carried out successfully.
  */
-Chord.prototype.join = function(bootstrap_id, callback) {
+Chord.prototype.join = function(bootstrapPeer, callback) {
     var i, self = this;
     if (self._joining) {
         callback("Already joining");
         return;
     }
     self._joining = true;
-    // make sure we are not running stabilize() parallel to a join
-    self._stabilizeTimer = clearTimeout(self._stabilizeTimer);
-    self.connect(bootstrap_id, function(err, bootstrapNode) {
+
+    self.addPeer(bootstrapPeer, function(err, bootstrapNode) {
         if (err) {
             self._joining = false;
-            callback("Could not connect to bootstrapNode" + err);
+            callback("Could not add the bootstrap peer: " + err);
             return;
         }
-        self.log("My bootstrap node is " + bootstrap_id.toString());
-        bootstrapNode.find_predecessor(self._localNode.id(), function(err, res) {
+        self.log("My bootstrap peer is " + bootstrapNode.id().toString());
+        bootstrapNode.find_predecessor(self._localNode.id().plus(1), function(err, res) {
             if (err) {
                 self._joining = false;
-                callback("Could not find a predecessor: " + err);
+                callback("Could not find a successor: " + err);
                 return;
             }
             self.log("My successor is " + res.successor.toString());
@@ -150,13 +149,8 @@ Chord.prototype.join = function(bootstrap_id, callback) {
                     return;
                 } else {
                     self._localNode._successor = successorNode;
-                    self.updateSuccessorList(function(err) {
-                        self._joining = false;
-                        if (err) {
-                            callback("Could not fetch successorList " + err);
-                        }
-                        self._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
-                    });
+                    self._joining = false;
+                    console.log('JOINED');
                 }
             });
         });
@@ -207,9 +201,13 @@ Chord.prototype.find_predecessor = function(id, callback) {
             predecessor: self._localNode.predecessor_id(),
             successor: self._localNode.id()
         });
-        // } else if (self._localNode.id().equals(self._localNode.successor_id())) {
-        //     // inconsistent successor pointer, cannot answer
-        //     callback('Inconsistent successor pointer');
+    } else if (self._localNode.id().equals(self._localNode.successor_id())) {
+        // inconsistent successor pointer, cannot answer this correctly
+        // maybe i am the only one in the ring
+        callback(null, {
+            successor: self._localNode.id(),
+            predecessor: self._localNode.id()
+        });
     } else {
         // @todo: use finger table to route further
         self._localNode._successor.find_predecessor(id, callback);
@@ -236,6 +234,12 @@ Chord.prototype.connect = function(id, callback) {
     }
 };
 
+/**
+ * Add a peer to the list of remotes.
+ *
+ * @param peer {Peer} Peer to add
+ * @param callback {Function} called after the peer has been added. returns
+ */
 Chord.prototype.addPeer = function(peer, callback) {
     // keep length of remotes low, if bigger than x, delete one if its not succ or pre
     if (this._remotes.length >= this._maxPeerConnections) {
@@ -248,19 +252,7 @@ Chord.prototype.addPeer = function(peer, callback) {
     }
     this._remotes[peer.id.toString()] = new ChordNode(peer, this, false);
     // TODO: what if we already have a node with this ID?
-    if (Object.keys(this._remotes).length === 1 && !this._joining) {
-        this.join(peer.id, function(err) {
-            if (err) {
-                console.log("Join failed: ", err);
-                callback(err);
-                return;
-            }
-            console.log("JOINED");
-            callback();
-        });
-    } else {
-        callback();
-    }
+    callback(null, this._remotes[peer.id.toString()]);
 };
 
 Chord.prototype.removePeer = function(peer) {
@@ -269,6 +261,12 @@ Chord.prototype.removePeer = function(peer) {
 
 Chord.prototype.stabilize = function() {
     var self = this;
+
+    // dont run stabilize when we are currently joining
+    if (self._joining) {
+        self._stabilizeTimer = setTimeout(this.stabilize.bind(this), this._stabilizeInterval);
+        return;
+    }
     self._stabilizeTimer = clearTimeout(self._stabilizeTimer);
 
     // check if pre is still up if it's not unset
@@ -292,7 +290,7 @@ Chord.prototype.stabilize = function() {
                 self._remotes = {};
                 self._localNode._successor = self._localNode;
                 self._localNode._predecessor = null;
-                self._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
+                self.stabilize();
                 return;
             } else if (!!err && self._successorList.length > 0) {
                 // successor failed, we can recover using the successor list
@@ -324,7 +322,7 @@ Chord.prototype.stabilize = function() {
                             self._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
                         });
                     } else if (!err) {
-                        self.log('nobody smuggled in');
+                        self.log('nobody smuggled in - everything is superb');
                         self._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
                     } else {
                         self.log(err);
@@ -337,15 +335,23 @@ Chord.prototype.stabilize = function() {
                 self._localNode._successor.notify(self._localNode.id(), function() {});
             }
         });
-        // i am my own successor. this only happens when reconnecting using 
-        // the successor_list failed. In this case, remove all remotes and
-        // wait for someone else to join us (same state as before the join)
     } else {
-        self.log('Waiting for somebody else to join me. he is my new successor');
+        // i am my own successor. this only happens when reconnecting using 
+        // the successor_list failed. In this case, pick a remote to re-join the DHT
         var remoteIds = self.getPeerIds();
-        if (remoteIds.length >= 1 && self._remotes[remoteIds[0]] instanceof ChordNode) {
-            self._localNode._successor = self._remotes[remoteIds[0]];
-            self.log('RE-JOINED');
+        if (remoteIds.length >= 1) {
+            var bootstrapNodeId = remoteIds[Math.floor(Math.random() * remoteIds.length)];
+            var bootstrapNode = self._remotes[bootstrapNodeId];
+            self.log('Attempting RE-JOIN using random peer from _remotes: ' + bootstrapNode.id().toString());
+            self.join(bootstrapNode._peer, function(err) {
+                if (err) {
+                    self.log('RE-JOIN failed:', err);
+                } else {
+                    self.log('RE-JOIN successful');
+                }
+            });
+        } else {
+            self.log('Waiting for somebody to join me');
         }
         self._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
     }
@@ -448,4 +454,11 @@ if (typeof(module) !== 'undefined') {
  * Invoked after the node has joined the DHT.
  * @callback Chord~joinCallback
  * @param id {Number} This node's Chord ID.
+ */
+
+/**
+ * Invoked after a Peer has been added to the Router.
+ * @callback Chord~addPeerCallback
+ * @param err {String} An error message if something went wrong
+ * @param node {ChordNode} Node instance that was added to `_remotes`
  */
