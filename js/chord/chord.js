@@ -41,6 +41,7 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
     this.debug = false;
     this._successorList = [];
     this._stabilizeInterval = 1000;
+    this._stabilizeTimer = null;
     this._maxPeerConnections = 10;
 
     var memoizer = Helper.memoize(Helper.fingerTableIntervalStart.bind(this));
@@ -126,30 +127,38 @@ Chord.prototype.join = function(bootstrap_id, callback) {
         return;
     }
     self._joining = true;
+    // make sure we are not running stabilize() parallel to a join
+    self._stabilizeTimer = clearTimeout(self._stabilizeTimer);
     self.connect(bootstrap_id, function(err, bootstrapNode) {
-        self.log("my bootstrap node is " + bootstrap_id.toString());
         if (err) {
-            callback(err);
+            self._joining = false;
+            callback("Could not connect to bootstrapNode" + err);
             return;
         }
+        self.log("My bootstrap node is " + bootstrap_id.toString());
         bootstrapNode.find_predecessor(self._localNode.id(), function(err, res) {
-            self.log("my successor is " + res.successor.toString());
             if (err) {
-                callback(err);
+                self._joining = false;
+                callback("Could not find a predecessor: " + err);
                 return;
             }
+            self.log("My successor is " + res.successor.toString());
             self.connect(res.successor, function(err, successorNode) {
                 if (err) {
-                    callback(err);
-                    return;
-                }
-                self._localNode._successor = successorNode;
-
-                self.updateSuccessorList(function() {
                     self._joining = false;
-                    setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
-                    callback();
-                });
+                    callback("The proposed successor was not reachable: " + err);
+                    return;
+                } else {
+                    self._localNode._successor = successorNode;
+                    self.updateSuccessorList(function(err) {
+                        self._joining = false;
+                        if (err) {
+                            callback("Could not fetch successorList");
+                        } else {
+                            self._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
+                        }
+                    });
+                }
             });
         });
     });
@@ -207,6 +216,10 @@ Chord.prototype.find_predecessor = function(id, callback) {
 
 Chord.prototype.connect = function(id, callback) {
     var self = this;
+    if (id.equals(self._localNode.id())) {
+        callback('cannot connect to myself');
+        return;
+    }
     if (this._remotes[id]) {
         callback(null, this._remotes[id]);
     } else {
@@ -236,6 +249,7 @@ Chord.prototype.addPeer = function(peer, callback) {
     if (Object.keys(this._remotes).length === 1 && !this._joining) {
         this.join(peer.id, function(err) {
             if (err) {
+                console.log("Join failed: ", err);
                 callback(err);
                 return;
             }
@@ -269,10 +283,14 @@ Chord.prototype.stabilize = function() {
     if (!self._localNode.successor_id().equals(self._localNode.id())) {
         self._localNode._successor._peer.sendHeartbeat(function(err) {
             if (!!err && self._successorList.length <= 0) {
-                // successor failed, we're fucked
-                // @todo: need to wait for another peer to connect
+                self.log('successor failed, cannot recover. RESETTING');
+                // @todo: we might be able to recover using a node in `self._remotes`
+                // @todo: do we have to cleanup the remotes?
+                self._remotes = {};
                 self._localNode._successor = self._localNode;
-                setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
+                self._localNode._predecessor = null;
+                this._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
+                return;
             } else if (!!err && self._successorList.length > 0) {
                 // successor failed, we can recover using the successor list
                 var new_suc_id = self._successorList[Math.floor(Math.random() * self._successorList.length)];
@@ -284,30 +302,40 @@ Chord.prototype.stabilize = function() {
                     var index = self._successorList.indexOf(new_suc_id);
                     var proposedSuccessorId = self._successorList.splice(index, 1);
                     self.log('removed proposed successor from successorList:', proposedSuccessorId.toString());
-                    setTimeout(self.stabilize.bind(self), self._stabilizeInterval); // delay timeout until we're done connecting
+                    this._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
                 });
             } else {
-                // successor is up, check if someone smuggeld in between (id, successor_id]
+                // successor is up, check if someone smuggled in between (id, successor_id]
                 // or if successor.predecessor == successor (special case when predecessor is unknown)
                 self._localNode._successor.find_predecessor(self._localNode.successor_id(), function(err, res) {
                     if (Range.inOpenInterval(res.predecessor, self._localNode.id(), self._localNode.successor_id())) {
                         self.log('we have a successor in (myId, sucId), it becomes our new successor');
                         self.connect(res.predecessor, function(err, suc_pre_node) {
                             self._localNode._successor = suc_pre_node;
-                            setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
+                            this._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
                         });
                     } else {
-                        setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
+                        self.log('nobody smuggled in');
+                        this._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
                     }
                 });
                 // update successor list if everything is allright
                 self.updateSuccessorList(function() {});
+                // notify our successor of us
+                self._localNode._successor.notify(self._localNode.id(), function() {});
             }
         });
-        // notify our successor of us
-        self._localNode._successor.notify(self._localNode.id(), function() {});
+        // i am my own successor. this only happens when reconnecting using 
+        // the successor_list failed. In this case, remove all remotes and
+        // wait for someone else to join us (same state as before the join)
     } else {
-        setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
+        self.log('Waiting for somebody else to join me. he is my new successor');
+        var remoteIds = self.getPeerIds();
+        if (remoteIds.length >= 1 && self._remotes[remoteIds[0]] instanceof ChordNode) {
+            self._localNode._successor = self._remotes[remoteIds[0]];
+            self.log('RE-JOINED');
+        }
+        self._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
     }
 };
 

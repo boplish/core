@@ -80,13 +80,13 @@ ChordNode.prototype = {
             type: this.message_types.FIND_PREDECESSOR,
             id: id.toString()
         }, function(err, msg) {
-            if (!err && msg && msg.res) {
+            if (!err && msg && msg.res && msg.res.predecessor && msg.res.successor) {
                 cb(null, {
                     successor: new BigInteger(msg.res.successor),
                     predecessor: new BigInteger(msg.res.predecessor)
                 });
             } else {
-                cb(err);
+                cb('Find predecessor failed: ' + err, null);
             }
         });
     },
@@ -172,15 +172,24 @@ ChordNode.prototype = {
     _find_predecessor: function(id, seqnr) {
         var self = this;
         this._chord.find_predecessor(id, function(err, res) {
-            var msg = {
-                type: self.message_types.PREDECESSOR,
-                res: {
-                    successor: res.successor.toString(),
-                    predecessor: res.predecessor.toString()
-                },
-                seqnr: seqnr
-            };
-            self._send(msg);
+            if (!err) {
+                var msg = {
+                    type: self.message_types.PREDECESSOR,
+                    res: {
+                        successor: res.successor.toString(),
+                        predecessor: res.predecessor.toString()
+                    },
+                    seqnr: seqnr
+                };
+                self._send(msg);
+            } else {
+                var msg = {
+                    type: self.message_types.ERROR,
+                    error: err,
+                    seqnr: seqnr
+                };
+                self._send(msg);
+            }
         });
     },
 

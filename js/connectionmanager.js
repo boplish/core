@@ -119,7 +119,7 @@ ConnectionManager.prototype = {
                         }
                     }, function(err) {
                         if (err) {
-                            console.log(err);
+                            callback(err);
                         }
                     });
                 }.bind(this), this._onCreateOfferError.bind(this, callback));
