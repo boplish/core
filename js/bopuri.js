@@ -18,6 +18,9 @@ var BopURI = function(str) {
 
     var prefixArr = prefix.split(":");
     this.scheme = prefixArr[0];
+    if (this.scheme !== 'bop') {
+        throw new Error('Tried to create URI with unknown scheme: ' + this.scheme);
+    }
     this.uid = prefixArr[1];
     this.protocol = prefixArr[2];
 
@@ -39,7 +42,7 @@ var BopURI = function(str) {
 };
 
 BopURI.create = function(authority, protocol, path, query) {
-    return new BopURI('bop:' + authority + ':' + protocol + (path[0] === '/' ? '' : '/') + path + (query ? '?' + query : ''));
+    return new BopURI('bop:' + authority + ':' + protocol + "/" + encodeURIComponent(path[0] === '/' ? path.substr(1) : path) + (query ? '?' + query : ''));
 };
 
 BopURI.prototype = {
