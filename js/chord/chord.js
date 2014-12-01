@@ -151,6 +151,7 @@ Chord.prototype.join = function(bootstrapPeer, callback) {
                     self._localNode._successor = successorNode;
                     self._joining = false;
                     console.log('JOINED');
+                    callback(null);
                 }
             });
         });
