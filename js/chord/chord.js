@@ -308,14 +308,17 @@ Chord.prototype.stabilize = function() {
                 // successor is up, check if someone smuggled in between (id, successor_id]
                 // or if successor.predecessor == successor (special case when predecessor is unknown)
                 self._localNode._successor.find_predecessor(self._localNode.successor_id(), function(err, res) {
-                    if (Range.inOpenInterval(res.predecessor, self._localNode.id(), self._localNode.successor_id())) {
+                    if (!err && Range.inOpenInterval(res.predecessor, self._localNode.id(), self._localNode.successor_id())) {
                         self.log('we have a successor in (myId, sucId), it becomes our new successor');
                         self.connect(res.predecessor, function(err, suc_pre_node) {
                             self._localNode._successor = suc_pre_node;
                             this._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
                         });
-                    } else {
+                    } else if (!err) {
                         self.log('nobody smuggled in');
+                        this._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
+                    } else {
+                        self.log(err);
                         this._stabilizeTimer = setTimeout(self.stabilize.bind(self), self._stabilizeInterval);
                     }
                 });
