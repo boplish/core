@@ -89,21 +89,14 @@ describe('Chord', function() {
     });
     describe('#join', function() {
         it('should not allow to be called twice', function(done) {
-            c.join(new BigInteger(1), function() {
+            c.join(new Peer(new BigInteger(1), null, dcStub), function() {
                 throw new Error("Success callback called");
             });
-            c.join(new BigInteger(1), function(err) {
+            c.join(new Peer(new BigInteger(1), null, dcStub), function(err) {
                 if (err) {
                     done();
                 }
             });
-        });
-        it('should try to connect to bootstrap peer', function() {
-            sinon.spy(cm, "connect");
-            c.join(new BigInteger(1));
-            assert.ok(cm.connect.calledOnce);
-            assert.ok(cm.connect.args[0][0].equals(new BigInteger(1)));
-            cm.connect.restore();
         });
     });
     describe('#responsible', function() {
