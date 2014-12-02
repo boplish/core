@@ -402,10 +402,10 @@ Chord.prototype.route = function(to, message, callback) {
         if (typeof(self._routeInterceptor[i]) === 'function') {
             self._routeInterceptor[i](rawMsg, function(err, _rawMsg, drop) {
                 if (err) {
-                    self.log('Error from RouteInterceptor', err);
-                    callback(err);
+                    callback('Error from RouteInterceptor: ' + err);
                     return;
                 } else if (!!drop) {
+                    self.log('RouteInterceptor dropped message', JSON.stringify(_rawMsg));
                     callback(null);
                     return;
                 }
