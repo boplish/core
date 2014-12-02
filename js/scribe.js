@@ -28,7 +28,7 @@ Scribe.prototype = {
         for (var prop in self._myGroups) {
             arr.push(self._myGroups[prop]);
         }
-        return arr.toString();
+        return arr;
     },
     _onRouteIntercept: function(msg, next) {
         var self = this;
