@@ -7,6 +7,7 @@ var sha1 = require('./third_party/sha1.js');
 var Router = require('./chord/chord.js');
 var BigInteger = require('./third_party/BigInteger.js');
 var BopURI = require('./bopuri.js');
+var Scribe = require('./scribe.js');
 
 /**
  * @constructor
@@ -66,6 +67,7 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
 
     this._connectionManager = new ConnectionManager();
     this._router = new Router(id, channel, this._connectionManager);
+    this._scribe = new Scribe(this._router);
 
     channel.onopen = function() {
         (function join() {
