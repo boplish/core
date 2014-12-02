@@ -68,6 +68,8 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     this._connectionManager = new ConnectionManager();
     this._router = new Router(id, channel, this._connectionManager);
     this._scribe = new Scribe(this._router);
+    this._scribe.onmessage = this._onGroupMessage.bind(this);
+    this._protocols = {};
 
     channel.onopen = function() {
         (function join() {
@@ -123,6 +125,35 @@ BOPlishClient.prototype = {
                 }
 
                 self._send(bopuri, protocolIdentifier, msg);
+            },
+            group: {
+                create: function(groupId, cb) {
+                    var uri = BopURI.create(groupId, protocolIdentifier, '', '');
+                    self._scribe.create(uri.toString(), cb);
+                },
+                leave: function(groupId, cb) {
+                    var uri = BopURI.create(groupId, protocolIdentifier, '', '');
+                    self._scribe.leave(uri.toString(), cb);
+                },
+                subscribe: function(groupId, cb) {
+                    var uri = BopURI.create(groupId, protocolIdentifier, '', '');
+                    self._scribe.subscribe(uri.toString(), cb);
+                },
+                publish: function(groupId, msg, cb) {
+                    var uri = BopURI.create(groupId, protocolIdentifier, '', '');
+                    self._scribe.publish(uri.toString(), msg, cb);
+                },
+                getGroups: function() {
+                    var groups = self._scribe.getGroups();
+                    var myGroups = [];
+                    for (var item in groups) {
+                        var uri = new BopURI(groups[item]);
+                        if (uri.protocol === protocolIdentifier) {
+                            myGroups.push(uri.uid);
+                        }
+                    }
+                    return myGroups;
+                }
             }
         };
         this._router.registerDeliveryCallback(protocolIdentifier, function(msg) {
@@ -130,7 +161,17 @@ BOPlishClient.prototype = {
                 protocol.onmessage(msg.from, msg.payload);
             }
         });
+        this._protocols[protocolIdentifier] = protocol;
         return protocol;
+    },
+
+    _onGroupMessage: function(to, msg) {
+        var uri = new BopURI(to);
+        if (this._protocols[uri.protocol]) {
+            if (typeof this._protocols[uri.protocol].group.onmessage === 'function') {
+                this._protocols[uri.protocol].group.onmessage(uri.uid, msg);
+            }
+        }
     },
 
     /**
