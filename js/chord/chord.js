@@ -43,6 +43,7 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
     this._stabilizeInterval = 1000;
     this._stabilizeTimer = setTimeout(this.stabilize.bind(this), this._stabilizeInterval);
     this._maxPeerConnections = 10;
+    this._routeInterceptor = [];
 
     var memoizer = Helper.memoize(Helper.fingerTableIntervalStart.bind(this));
     for (var i = 1; i <= this._m; i++) {
@@ -389,37 +390,71 @@ Chord.prototype.remove = function(key) {
 };
 
 Chord.prototype.route = function(to, message, callback) {
-    this._monitorCallback(message);
-    if (to === "*") {
-        this.log("routing (" + [message.type, message.seqnr].join(", ") + ") to signaling server");
-        this._localNode.route(to, message, callback);
-    } else if (this.id.equals(to)) {
-        try {
-            this.log("(" + [message.type, message.seqnr].join(", ") + ") is for me");
-            this._messageCallbacks[message.type](message);
-            callback(null);
-        } catch (e) {
-            this.log("Error handling message: ", e);
-            callback("Error handling message: " + e);
-        }
-    } else if (Range.inOpenInterval(to, this._localNode.predecessor_id(), this.id)) {
-        this.log("routing (" + [message.type, message.payload.type, message.seqnr].join(", ") + ") to " + to.toString() + " through signaling server");
-        this._localNode.route(to, message, callback);
-    } else {
-        if (message.type === 'signaling-protocol') {
-            // we need to route offer/answer packets through the server to avoid
-            // endless route loops
-            this._localNode.route(to, message, callback);
+    var self = this;
+    var rawMsg = {
+        to: to,
+        payload: message
+    };
+
+    // make sure we run all interceptors before continuing
+    var i = 0;
+    (function callRouteInterceptor() {
+        if (typeof(self._routeInterceptor[i]) === 'function') {
+            self._routeInterceptor[i](rawMsg, function(err, _rawMsg, drop) {
+                if (err) {
+                    self.log('Error from RouteInterceptor', err);
+                    callback(err);
+                    return;
+                } else if (!!drop) {
+                    callback(null);
+                    return;
+                }
+                rawMsg = _rawMsg;
+                i++;
+                callRouteInterceptor();
+            });
         } else {
-            console.log("asking successor to route message to " + to.toString());
-            this._localNode._successor.route(to, message, callback);
-            this.log("routing (" + [message.type, message.payload.type, message.seqnr].join(", ") + ") to " + this._localNode.successor_id().toString());
+            route(rawMsg.to, rawMsg.payload, callback);
+        }
+    })();
+
+    function route(to, message, callback) {
+        self._monitorCallback(message);
+        if (to === "*") {
+            self.log("routing (" + [message.type, message.seqnr].join(", ") + ") to signaling server");
+            self._localNode.route(to, message, callback);
+        } else if (self.id.equals(to)) {
+            try {
+                self.log("(" + [message.type, message.seqnr].join(", ") + ") is for me");
+                self._messageCallbacks[message.type](message);
+                callback(null);
+            } catch (e) {
+                self.log("Error handling message: ", e);
+                callback("Error handling message: " + e);
+            }
+        } else if (Range.inOpenInterval(to, self._localNode.predecessor_id(), self.id)) {
+            self.log("routing (" + [message.type, message.payload.type, message.seqnr].join(", ") + ") to " + to.toString() + " through signaling server");
+            self._localNode.route(to, message, callback);
+        } else {
+            if (message.type === 'signaling-protocol') {
+                // we need to route offer/answer packets through the server to avoid
+                // endless route loops
+                self._localNode.route(to, message, callback);
+            } else {
+                console.log("asking successor to route message to " + to.toString());
+                self._localNode._successor.route(to, message, callback);
+                self.log("routing (" + [message.type, message.payload.type, message.seqnr].join(", ") + ") to " + self._localNode.successor_id().toString());
+            }
         }
     }
 };
 
 Chord.prototype.registerDeliveryCallback = function(protocol, callback) {
     this._messageCallbacks[protocol] = callback;
+};
+
+Chord.prototype.registerInterceptor = function(interceptor) {
+    this._routeInterceptor.push(interceptor);
 };
 
 Chord.prototype.registerMonitorCallback = function(callback) {
