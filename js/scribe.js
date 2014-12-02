@@ -10,7 +10,7 @@ var Scribe = function(router) {
     this._router = router;
     this._messageTypes = {
         CREATE: 'CREATE',
-        REMOVE: 'REMOVE',
+        LEAVE: 'LEAVE',
         SUBSCRIBE: 'SUBSCRIBE',
         PUBLISH: 'PUBLISH',
         MESSAGE: 'MESSAGE'
@@ -43,6 +43,9 @@ Scribe.prototype = {
             } else if (protoPayload.type === self._messageTypes.SUBSCRIBE) {
                 // somebody subscribes, intercept and add him as subscriber
                 return self._handleSubscribe(msg, next);
+            } else if (protoPayload.type === self._messageTypes.LEAVE) {
+                // child leaves a group. propagate or stop
+                return self._handleLeave(msg, next);
             }
         }
         return next(null, msg);
@@ -50,11 +53,9 @@ Scribe.prototype = {
     _onmessage: function(msg) {
         var self = this;
         if (!msg || (msg.type !== 'bopscribe-protocol')) {
-            console.log('Scribe: Discarding message because the type is unknown', msg);
-            return;
+            return console.log('Scribe: Discarding message because the type is unknown', msg);
         } else if (msg.payload.type !== self._messageTypes.MESSAGE) {
-            console.log('Scribe: This message should not have gotten here', msg);
-            return;
+            return console.log('Scribe: This message should not have gotten here', msg);
         }
         self._handleMessage(msg.payload);
     },
@@ -84,23 +85,40 @@ Scribe.prototype = {
             }
         });
     },
+    leave: function(groupId, cb) {
+        var self = this;
+        var hash = Sha1.bigIntHash(groupId);
+        self._send(hash, {
+            type: self._messageTypes.LEAVE
+        }, function(err, msg) {
+            if (err) {
+                return cb(err);
+            } else {
+                cb(null, groupId);
+            }
+        });
+    },
     publish: function(groupId, msg, cb) {
         var self = this;
         if (typeof(cb) !== 'function') {
             throw new Error('Callback not specified');
         } else if (!groupId) {
             // @todo: check if groupId is a valid bopuri
-            cb('Discarding message as no groupId has been specified');
-            return;
+            return cb('Discarding message as no groupId has been specified');
         } else if (!msg) {
-            cb('Discarding empty message');
-            return;
+            return cb('Discarding empty message');
         }
         var groupHash = Sha1.bigIntHash(groupId);
         self._send(groupHash, {
             type: self._messageTypes.PUBLISH,
             payload: msg
-        }, cb);
+        }, function(err, msg) {
+            if (err) {
+                return cb(err);
+            } else {
+                cb(null, groupId);
+            }
+        });
     },
     subscribe: function(groupId, cb) {
         var self = this;
@@ -108,8 +126,7 @@ Scribe.prototype = {
             throw new Error('Callback not specified');
         } else if (!groupId) {
             // @todo: check if groupId is a valid bopuri
-            cb('Discarding message as no groupId has been specified');
-            return;
+            return cb('Discarding message as no groupId has been specified');
         }
         var peerId = self._router._localNode.id();
         var groupHash = Sha1.bigIntHash(groupId);
@@ -120,8 +137,7 @@ Scribe.prototype = {
             from: peerId.toString()
         }, function(err, msg) {
             if (err) {
-                cb(err);
-                return;
+                return cb(err);
             } else {
                 self._myGroups[groupHash] = groupId;
                 cb(null, groupId);
@@ -160,14 +176,13 @@ Scribe.prototype = {
         var protoPayload = routerPayload.payload;
 
         var groupHash = new BigInteger(to);
-        //var from = new BigInteger(protoPayload.from);
         // @todo: is the publisher authorized?
 
         // drop message, we respond with a `_messageTypes.MESSAGE`
         next(null, msg, true);
-        if (!self._subscriptions[groupHash]) {
-            console.log('no subscribers for', groupHash.toString());
-            return;
+
+        if (Object.keys(self._subscriptions[groupHash]).length <= 0) {
+            return console.log('no subscribers for', groupHash.toString());
         }
         self._send(self._router._localNode.id(), {
             type: self._messageTypes.MESSAGE,
@@ -178,6 +193,24 @@ Scribe.prototype = {
                 console.log('Rendezvous point could not send message: ' + err);
             }
         });
+    },
+    _handleLeave: function(msg, next) {
+        var self = this;
+        var to = msg.to;
+        var groupHash = new BigInteger(to);
+        var groupHashStr = groupHash.toString();
+
+        // i want to leave the group
+        if (self._subscriptions[groupHashStr] && self._subscriptions[groupHashStr][self._router._localNode.id()]) {
+            delete self._subscriptions[groupHashStr][self._router._localNode.id()];
+            delete self._myGroups[groupHashStr];
+        }
+        if (Object.keys(self._subscriptions[groupHashStr]).length <= 0 && !self._router._localNode.responsible(groupHash)) {
+            // no more subscribers for this group. propagate leave if we are not the root    
+            return next(null, msg, false);
+        }
+        // we still have some subscribers or we are the root. consume LEAVE
+        return next(null, msg, true);
     },
     _handleMessage: function(msg) {
         var self = this;
