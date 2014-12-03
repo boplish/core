@@ -16,17 +16,56 @@ var Scribe = function(router) {
         MESSAGE: 'MESSAGE'
     };
     this._subscriptions = {};
-    this._myGroups = [];
+    this._mySubscriptions = {};
+    this._createdGroups = {};
     this._router.registerDeliveryCallback('bopscribe-protocol', this._onmessage.bind(this));
     this._router.registerInterceptor(this._onRouteIntercept.bind(this));
+    this._refreshInterval = 5000; // ms
+    setInterval(this.maintain.bind(this), this._refreshInterval);
 };
 
 Scribe.prototype = {
+    maintain: function() {
+        var self = this;
+        // create groups periodically
+        for (var item in self._createdGroups) {
+            self.create(item, function(err, groupId) {
+                if (err) {
+                    console.log('could not re-create group: ' + item + err);
+                }
+            });
+        }
+        // remove old subscriptions
+        for (var group in self._subscriptions) {
+            var subscribers = self._subscriptions[group];
+            for (var subId in subscribers) {
+                var sub = subscribers[subId];
+                if (Date.now() - sub.added >= self._refreshInterval * 1.5) {
+                    console.log('removing subscriber due to timeout: ' + subId);
+                    delete self._subscriptions[subId];
+                }
+            }
+        }
+        // re-subscribe to keep me in remote subscriber list
+        for (var item in self._mySubscriptions) {
+            self.subscribe(self._mySubscriptions[item], function(err, groupId) {
+                if (err) {
+                    console.log('could not re-subscribe to group' + item + err);
+                }
+            });
+        }
+    },
     getGroups: function() {
         var self = this;
         var arr = [];
-        for (var prop in self._myGroups) {
-            arr.push(self._myGroups[prop]);
+        for (var group in self._subscriptions) {
+            var subscribers = self._subscriptions[group];
+            for (var subId in subscribers) {
+                var sub = subscribers[subId];
+                if (subId === self._router._localNode.id().toString()) {
+                    arr.push(self._mySubscriptions[group]);
+                }
+            }
         }
         return arr;
     },
@@ -79,9 +118,10 @@ Scribe.prototype = {
             createdOn: Date.now()
         }, function(err, res) {
             if (!err) {
+                self._createdGroups[hash.toString()] = groupId;
                 cb(null, groupId);
             } else {
-                cb('Could not create the group', err);
+                cb('Could not create the group: ' + err);
             }
         });
     },
@@ -139,7 +179,7 @@ Scribe.prototype = {
             if (err) {
                 return cb(err);
             } else {
-                self._myGroups[groupHash] = groupId;
+                self._mySubscriptions[groupHash] = groupId;
                 cb(null, groupId);
             }
         });
@@ -203,7 +243,7 @@ Scribe.prototype = {
         // i want to leave the group
         if (self._subscriptions[groupHashStr] && self._subscriptions[groupHashStr][self._router._localNode.id()]) {
             delete self._subscriptions[groupHashStr][self._router._localNode.id()];
-            delete self._myGroups[groupHashStr];
+            delete self._mySubscriptions[groupHashStr];
         }
         if (Object.keys(self._subscriptions[groupHashStr]).length <= 0 && !self._router._localNode.responsible(groupHash)) {
             // no more subscribers for this group. propagate leave if we are not the root    
@@ -222,7 +262,7 @@ Scribe.prototype = {
             var peerId = self._subscriptions[groupHashStr][index].peerId;
             if (peerId.equals(self._router._localNode.id())) {
                 // its for me, deliver to application
-                self.onmessage(self._myGroups[msg.groupHash], payload);
+                self.onmessage(self._mySubscriptions[msg.groupHash], payload);
             } else {
                 self._send(peerId, msg, function(err) {
                     if (err) {
