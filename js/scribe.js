@@ -15,9 +15,9 @@ var Scribe = function(router) {
         PUBLISH: 'PUBLISH',
         MESSAGE: 'MESSAGE'
     };
-    this._subscriptions = {};
-    this._mySubscriptions = {};
-    this._createdGroups = {};
+    this._subscriptions = {}; // [groupHash][member]
+    this._mySubscriptions = {}; // [groupHash]
+    this._createdGroups = {}; // [groupHash]
     this._router.registerDeliveryCallback('bopscribe-protocol', this._onmessage.bind(this));
     this._router.registerInterceptor(this._onRouteIntercept.bind(this));
     this._refreshInterval = 5000; // ms
@@ -28,29 +28,26 @@ Scribe.prototype = {
     maintain: function() {
         var self = this;
         // create groups periodically
-        for (var item in self._createdGroups) {
-            self.create(item, function(err, groupId) {
+        for (var grpHashStr in self._createdGroups) {
+            self.create(self._createdGroups[grpHashStr], function(err, groupId) {
                 if (err) {
-                    console.log('could not re-create group: ' + item + err);
+                    console.log('could not re-create group: ' + self._createdGroups[grpHashStr] + err);
                 }
             });
         }
         // remove old subscriptions
         for (var group in self._subscriptions) {
-            var subscribers = self._subscriptions[group];
-            for (var subId in subscribers) {
-                var sub = subscribers[subId];
-                if (Date.now() - sub.added >= self._refreshInterval * 1.5) {
-                    console.log('removing subscriber due to timeout: ' + subId);
-                    delete self._subscriptions[subId];
+            for (var memberId in self._subscriptions[group]) {
+                if (Date.now() - self._subscriptions[group][memberId].added >= self._refreshInterval * 1.5) {
+                    delete self._subscriptions[group][memberId];
                 }
             }
         }
         // re-subscribe to keep me in remote subscriber list
-        for (var item in self._mySubscriptions) {
-            self.subscribe(self._mySubscriptions[item], function(err, groupId) {
+        for (var myGrpHashStr in self._mySubscriptions) {
+            self.subscribe(self._mySubscriptions[myGrpHashStr], function(err, groupId) {
                 if (err) {
-                    console.log('could not re-subscribe to group' + item + err);
+                    console.log('could not re-subscribe to group' + self._mySubscriptions[myGrpHashStr] + err);
                 }
             });
         }
@@ -59,11 +56,12 @@ Scribe.prototype = {
         var self = this;
         var arr = [];
         for (var group in self._subscriptions) {
-            var subscribers = self._subscriptions[group];
-            for (var subId in subscribers) {
-                var sub = subscribers[subId];
+            for (var subId in self._subscriptions[group]) {
                 if (subId === self._router._localNode.id().toString()) {
-                    arr.push(self._mySubscriptions[group]);
+                    var groupname = self._mySubscriptions[group];
+                    if (groupname) { // group might not yet be removed 
+                        arr.push(groupname);
+                    }
                 }
             }
         }
@@ -109,6 +107,17 @@ Scribe.prototype = {
             payload: msg
         }, cb);
     },
+    remove: function(groupId, cb) {
+        // @todo: remove key from dht
+        var self = this;
+        var hash = Sha1.bigIntHash(groupId);
+        if (this._createdGroups[hash]) {
+            delete this._createdGroups[hash];
+            return cb(null, groupId);
+        } else {
+            return cb('Could not remove; we did not create group: ' + groupId);
+        }
+    },
     create: function(groupId, cb) {
         var self = this;
         var hash = Sha1.bigIntHash(groupId);
@@ -128,8 +137,18 @@ Scribe.prototype = {
     leave: function(groupId, cb) {
         var self = this;
         var hash = Sha1.bigIntHash(groupId);
+        var hashStr = hash.toString();
+
+        // i want to leave the group
+        if (self._subscriptions[hashStr]) {
+            delete self._mySubscriptions[hashStr];
+        } else {
+            return cb('Not a member of group: ' + groupId);
+        }
+
         self._send(hash, {
-            type: self._messageTypes.LEAVE
+            type: self._messageTypes.LEAVE,
+            peerId: self._router._localNode.id().toString()
         }, function(err, msg) {
             if (err) {
                 return cb(err);
@@ -205,7 +224,7 @@ Scribe.prototype = {
             next(null, msg, false);
         } else {
             // we are the rendezvous point - drop message
-            console.log('We are the rendezvous point for group %s', groupHash.toString());
+            // console.log('We are the rendezvous point for group %s', groupHash.toString());
             next(null, msg, true);
         }
     },
@@ -237,19 +256,26 @@ Scribe.prototype = {
     _handleLeave: function(msg, next) {
         var self = this;
         var to = msg.to;
+        var routerPayload = msg.payload;
+        var protoPayload = routerPayload.payload;
         var groupHash = new BigInteger(to);
         var groupHashStr = groupHash.toString();
+        var peerIdStr = protoPayload.peerId;
 
-        // i want to leave the group
-        if (self._subscriptions[groupHashStr] && self._subscriptions[groupHashStr][self._router._localNode.id()]) {
-            delete self._subscriptions[groupHashStr][self._router._localNode.id()];
-            delete self._mySubscriptions[groupHashStr];
+        // remove leaver
+        if (self._subscriptions[groupHashStr]) {
+            delete self._subscriptions[groupHashStr][peerIdStr];
         }
-        if (Object.keys(self._subscriptions[groupHashStr]).length <= 0 && !self._router._localNode.responsible(groupHash)) {
-            // no more subscribers for this group. propagate leave if we are not the root    
-            return next(null, msg, false);
+
+        // propagate leave if no subscribers are left and we are not the rendezvous point
+        if (!self._subscriptions[groupHashStr] || Object.keys(self._subscriptions[groupHashStr]).length <= 0) {
+            // cleanup group
+            delete self._subscriptions[groupHashStr];
+            if (!self._router._localNode.responsible(groupHash)) {
+                return next(null, msg, false);
+            }
         }
-        // we still have some subscribers or we are the root. consume LEAVE
+        // we still have some subscribers or we are the root. consume leave
         return next(null, msg, true);
     },
     _handleMessage: function(msg) {
