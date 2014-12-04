@@ -1,7 +1,7 @@
 BOPlish Core
 ============
 
-[![Build Status](https://travis-ci.org/boplish/core.png)](https://travis-ci.org/boplish/core)
+[![Build Status](https://travis-ci.org/boplish/core.svg?branch=master)](https://travis-ci.org/boplish/core)
 
 Browser-based Open Publishing (BOPlish) is an infrastructure-independent content
 sharing facility using WebRTC DataChannels. This repository holds the core
