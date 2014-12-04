@@ -37,7 +37,7 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
     this._monitorCallback = function() {};
     this._fingerTable = {};
     this._m = 160;
-    this._fingerTableEntries = 10;
+    this._fingerTableEntries = 16;
     this._maxPeerConnections = 15;
     this._joining = false;
     this.debug = true;
@@ -47,10 +47,11 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
 
     var memoizer = Helper.memoize(Helper.fingerTableIntervalStart.bind(this));
     for (var i = 0; i < this._fingerTableEntries; i++) {
-        var k = (i * this._m) / this._fingerTableEntries;
-        this._fingerTable[k] = {
+        var k = Math.round((i * this._m) / (this._fingerTableEntries - 1)) || 1;
+        this._fingerTable[i] = {
+            k: k,
             start: memoizer.bind(null, k),
-            node: this._localNode
+            node: this._localNode._successor
         };
     }
 
@@ -100,10 +101,9 @@ var Helper = {
 
 Chord.prototype._closest_preceding_finger = function(id) {
     var i;
-    for (i = this._fingerTableEntries; i >= 1; i--) {
-        var k = (i * this._m) / this._fingerTableEntries;
-        if (Range.inOpenInterval(this._fingerTable[k].node.id(), this.id, id)) {
-            return this._fingerTable[k].node;
+    for (i = this._fingerTableEntries - 1; i >= 0; i--) {
+        if (Range.inOpenInterval(this._fingerTable[i].node.id(), this.id, id)) {
+            return this._fingerTable[i].node;
         }
     }
     return this._localNode;
@@ -111,23 +111,22 @@ Chord.prototype._closest_preceding_finger = function(id) {
 
 Chord.prototype._fix_fingers = function() {
     var self = this;
-    var i = Math.floor(1 + Math.random() * self._fingerTableEntries);
-    var k = (i * self._m) / self._fingerTableEntries;
-    var key = self._fingerTable[k].start();
+    var i = Math.floor(Math.random() * self._fingerTableEntries);
+    var key = self._fingerTable[i].start();
 
     self.find_successor(key, function(err, msg) {
         if (err) {
             console.log('Error during fix_fingers:', err);
         } else if (msg.successor.equals(self._localNode.id())) {
             // we are the successor
-            self._fingerTable[k].node = self._localNode;
+            self._fingerTable[i].node = self._localNode;
         } else {
             // connect to new successor
             self.connect(msg.successor, function(err, node) {
                 if (err) {
                     return console.log('Error during fix_fingers:', err);
                 }
-                self._fingerTable[k].node = node;
+                self._fingerTable[i].node = node;
             });
         }
     });
@@ -137,13 +136,12 @@ Chord.prototype._fix_fingers = function() {
 
 Chord.prototype.getFingerTable = function() {
     var fingers = [];
-    for (var k in this._fingerTable) {
+    for (var i in this._fingerTable) {
         fingers.push({
-            k: k,
-            start: this._fingerTable[k].start().toString(),
-            successor: this._fingerTable[k].node.id().toString()
+            k: this._fingerTable[i].k,
+            start: this._fingerTable[i].start().toString(),
+            successor: this._fingerTable[i].node.id().toString()
         });
-        console.log('k: %s, key: %s, suc: ', k, this._fingerTable[k].start().toString(), this._fingerTable[k].node.id().toString());
     }
     return fingers;
 };
@@ -487,7 +485,7 @@ Chord.prototype.route = function(to, message, callback) {
                 self._localNode.route(to, message, callback);
             } else {
                 console.log("asking finger table where to route the message to " + to.toString());
-                var nextHop = self._closest_preceding_finger(to)._successor.route(to, message, callback);
+                var nextHop = self._closest_preceding_finger(to).route(to, message, callback);
                 self.log("routing (" + [message.type, message.payload.type, message.seqnr].join(", ") + ") to " + nextHop.toString());
             }
         }
