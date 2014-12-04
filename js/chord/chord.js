@@ -37,21 +37,27 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
     this._monitorCallback = function() {};
     this._fingerTable = {};
     this._m = 160;
+    this._fingerTableEntries = 10;
+    this._maxPeerConnections = 15;
     this._joining = false;
-    this.debug = false;
+    this.debug = true;
     this._successorList = [];
-    this._stabilizeInterval = 1000;
-    this._stabilizeTimer = setTimeout(this.stabilize.bind(this), this._stabilizeInterval);
-    this._maxPeerConnections = 10;
     this._routeInterceptor = [];
+    this._helper = Helper;
 
     var memoizer = Helper.memoize(Helper.fingerTableIntervalStart.bind(this));
-    for (var i = 1; i <= this._m; i++) {
-        this._fingerTable[i] = {
-            start: memoizer.bind(null, i),
+    for (var i = 0; i < this._fingerTableEntries; i++) {
+        var k = (i * this._m) / this._fingerTableEntries;
+        this._fingerTable[k] = {
+            start: memoizer.bind(null, k),
             node: this._localNode
         };
     }
+
+    this._stabilizeInterval = 1000;
+    this._stabilizeTimer = setTimeout(this.stabilize.bind(this), this._stabilizeInterval);
+    this._fixFingersInterval = 1000;
+    this._fixFingersTimer = setTimeout(this._fix_fingers.bind(this), this._fixFingersInterval);
 
     return this;
 };
@@ -73,8 +79,8 @@ var Helper = {
         };
     },
 
-    fingerTableIntervalStart: function(i) {
-        return this.id.add(BigInteger(2).pow(i - 1)).mod(BigInteger(2).pow(this._m));
+    fingerTableIntervalStart: function(k) {
+        return this.id.add(BigInteger(2).pow(k - 1)).mod(BigInteger(2).pow(this._m));
     },
 
     defineProperties: function(object) {
@@ -94,12 +100,52 @@ var Helper = {
 
 Chord.prototype._closest_preceding_finger = function(id) {
     var i;
-    for (i = this._m; i >= 1; i--) {
-        if (Range.inOpenInterval(this._fingerTable[i].node.id(), this.id, id)) {
-            return this._fingerTable[i].node;
+    for (i = this._fingerTableEntries; i >= 1; i--) {
+        var k = (i * this._m) / this._fingerTableEntries;
+        if (Range.inOpenInterval(this._fingerTable[k].node.id(), this.id, id)) {
+            return this._fingerTable[k].node;
         }
     }
     return this._localNode;
+};
+
+Chord.prototype._fix_fingers = function() {
+    var self = this;
+    var i = Math.floor(1 + Math.random() * self._fingerTableEntries);
+    var k = (i * self._m) / self._fingerTableEntries;
+    var key = self._fingerTable[k].start();
+
+    self.find_successor(key, function(err, msg) {
+        if (err) {
+            console.log('Error during fix_fingers:', err);
+        } else if (msg.successor.equals(self._localNode.id())) {
+            // we are the successor
+            self._fingerTable[k].node = self._localNode;
+        } else {
+            // connect to new successor
+            self.connect(msg.successor, function(err, node) {
+                if (err) {
+                    return console.log('Error during fix_fingers:', err);
+                }
+                self._fingerTable[k].node = node;
+            });
+        }
+    });
+
+    self._fixFingersTimer = setTimeout(self._fix_fingers.bind(self), self._fixFingersInterval);
+};
+
+Chord.prototype.getFingerTable = function() {
+    var fingers = [];
+    for (var k in this._fingerTable) {
+        fingers.push({
+            k: k,
+            start: this._fingerTable[k].start().toString(),
+            successor: this._fingerTable[k].node.id().toString()
+        });
+        console.log('k: %s, key: %s, suc: ', k, this._fingerTable[k].start().toString(), this._fingerTable[k].node.id().toString());
+    }
+    return fingers;
 };
 
 Chord.prototype.log = function(msg) {
@@ -211,8 +257,7 @@ Chord.prototype.find_predecessor = function(id, callback) {
             predecessor: self._localNode.id()
         });
     } else {
-        // @todo: use finger table to route further
-        self._localNode._successor.find_predecessor(id, callback);
+        self._closest_preceding_finger(id).find_predecessor(id, callback);
     }
 };
 
@@ -441,9 +486,9 @@ Chord.prototype.route = function(to, message, callback) {
                 // endless route loops
                 self._localNode.route(to, message, callback);
             } else {
-                console.log("asking successor to route message to " + to.toString());
-                self._localNode._successor.route(to, message, callback);
-                self.log("routing (" + [message.type, message.payload.type, message.seqnr].join(", ") + ") to " + self._localNode.successor_id().toString());
+                console.log("asking finger table where to route the message to " + to.toString());
+                var nextHop = self._closest_preceding_finger(to)._successor.route(to, message, callback);
+                self.log("routing (" + [message.type, message.payload.type, message.seqnr].join(", ") + ") to " + nextHop.toString());
             }
         }
     }
