@@ -146,12 +146,12 @@ BOPlishClient.prototype = {
                 getGroups: function() {
                     var groups = self._scribe.getGroups();
                     var myGroups = [];
-                    for (var item in groups) {
-                        var uri = new BopURI(groups[item]);
+                    groups.forEach(function(item) {
+                        var uri = new BopURI(item);
                         if (uri.protocol === protocolIdentifier) {
                             myGroups.push(uri.uid);
                         }
-                    }
+                    });
                     return myGroups;
                 }
             }

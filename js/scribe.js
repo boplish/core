@@ -240,7 +240,7 @@ Scribe.prototype = {
         // drop message, we respond with a `_messageTypes.MESSAGE`
         next(null, msg, true);
 
-        if (Object.keys(self._subscriptions[groupHash]).length <= 0) {
+        if (self._subscriptions[groupHash] && Object.keys(self._subscriptions[groupHash]).length <= 0) {
             return console.log('no subscribers for', groupHash.toString());
         }
         self._send(self._router._localNode.id(), {
