@@ -20,7 +20,7 @@ var ChordNode = function(peer, chord, localNode) {
     this.debug = false;
     this._localNode = !!localNode;
     this._store = {};
-    this._messageTimeout = 1000;
+    this._messageTimeout = this._peer._heartbeatDefaultTimer;
 
     return this;
 };

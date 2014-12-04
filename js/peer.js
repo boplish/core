@@ -18,7 +18,7 @@ var Peer = function(id, peerConnection, dataChannel) {
     this._peerConnection = peerConnection;
     this._dataChannel = dataChannel;
     this._dataChannel.onmessage = this._onmessage.bind(this);
-    this._heartbeatDefaultTimer = 500; // default heartbeat timer
+    this._heartbeatDefaultTimer = 5000; // default heartbeat timer
     this._heartbeatCallbacks = {};
 };
 
