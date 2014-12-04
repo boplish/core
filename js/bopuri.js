@@ -7,7 +7,7 @@
  *
  * @param str the URI string to parse
  */
-BopURI = function(str) {
+var BopURI = function(str) {
 
     if (!(this instanceof BopURI)) {
         return new BopURI(str);
@@ -18,6 +18,9 @@ BopURI = function(str) {
 
     var prefixArr = prefix.split(":");
     this.scheme = prefixArr[0];
+    if (this.scheme !== 'bop') {
+        throw new Error('Tried to create URI with unknown scheme: ' + str);
+    }
     this.uid = prefixArr[1];
     this.protocol = prefixArr[2];
 
@@ -38,7 +41,15 @@ BopURI = function(str) {
     return this;
 };
 
-BopURI.prototype = {};
+BopURI.create = function(authority, protocol, path, query) {
+    return new BopURI('bop:' + authority + ':' + protocol + "/" + (path[0] === '/' ? path.substr(1) : path) + (query ? '?' + query : ''));
+};
+
+BopURI.prototype = {
+    toString: function() {
+        return this.scheme + ":" + this.uid + ":" + this.protocol + this.path + (this.query ? "?" + this.query : "");
+    }
+};
 
 if (typeof(module) !== 'undefined') {
     module.exports = BopURI;

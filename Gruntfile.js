@@ -1,9 +1,16 @@
+var shell = require('shelljs');
+
 module.exports = function(grunt) {
+
+    // Load grunt tasks automatically
+    require('load-grunt-tasks')(grunt);
+
     grunt.initConfig({
         jsdoc: {
-            src: ['js/*.js'],
+            src: ['js/'],
             options: {
-                destination: 'doc'
+                destination: 'doc',
+                recurse: true
             }
         },
 
@@ -15,41 +22,67 @@ module.exports = function(grunt) {
                     define: true
                 }
             },
-            all: ["Gruntfile.js", "js/*.js"]
+            all: ["Gruntfile.js", "js/**/*.js"]
         },
 
         jsbeautifier: {
             verify: {
-                src: ['Gruntfile.js', 'js/*.js'],
+                src: ['Gruntfile.js', "js/**/*.js"],
                 options: {
                     mode: 'VERIFY_ONLY'
                 }
             },
             modify: {
-                src: ['Gruntfile.js', 'js/*.js']
+                src: ['Gruntfile.js', "js/**/*.js"]
             }
         },
 
-        uglify: {
+        copy: {
+            dist: {
+                files: [{
+                    expand: true,
+                    dot: true,
+                    cwd: 'js',
+                    dest: 'dist',
+                    src: [
+                        '*.js',
+                    ]
+                }]
+            }
+        },
+
+        // Empties folders to start fresh
+        clean: {
+            dist: {
+                files: [{
+                    dot: true,
+                    src: [
+                        'dist/*',
+                    ]
+                }]
+            }
+        },
+
+        browserify: {
             debug: {
-                options: {
-                    mangle: false,
-                    compress: false,
-                    beautify: true
-                },
                 files: {
-                    'dist/boplish.min.js': ['js/*.js']
+                    'dist/boplish-browserified-debug.js': ['js/**/*.js']
+                },
+                options: {
+                    browserifyOptions: {
+                        'noParse': 'js/adapter.js'
+                    }
                 }
             },
-            production: {
-                options: {
-                    mangle: true,
-                    compress: true,
-                    beautify: false,
-                    report: 'min'
-                },
+            dist: {
                 files: {
-                    'dist/boplish.min.js': ['js/*.js']
+                    'dist/boplish-browserified-dist.js': ['js/**/*.js']
+                },
+                options: {
+                    transform: ['uglifyify'],
+                    browserifyOptions: {
+                        'noParse': 'js/adapter.js'
+                    }
                 }
             }
         },
@@ -58,23 +91,34 @@ module.exports = function(grunt) {
             options: {
                 ignoreLeaks: false,
                 ui: 'bdd',
-                reporter: 'dot'
+                reporter: 'spec'
             },
 
             all: {
-                src: ['test/*-test.js']
-            }
-        }
+                src: ['test/**/*-test.js']
+            },
 
+            core: {
+                src: ['test/*-test.js']
+            },
+
+            chord: {
+                src: ['test/chord/*-test.js']
+            },
+        }
     });
-    grunt.loadNpmTasks('grunt-jsdoc');
-    grunt.loadNpmTasks('grunt-contrib-jshint');
-    grunt.loadNpmTasks('grunt-contrib-uglify');
-    grunt.loadNpmTasks('grunt-simple-mocha');
-    grunt.loadNpmTasks('grunt-jsbeautifier');
+
     grunt.registerTask('beautify', 'jsbeautifier:modify');
     grunt.registerTask('verify', 'jsbeautifier:verify');
-    grunt.registerTask('test', 'simplemocha');
-    grunt.registerTask('dist', 'uglify:production');
-    grunt.registerTask('default', ['jsdoc', 'jshint', 'simplemocha', 'beautify', 'uglify:production']);
+    grunt.registerTask('dist', ['clean', 'browserify:dist']);
+    grunt.registerTask('debug', ['clean', 'browserify:debug']);
+    grunt.registerTask('test', 'simplemocha:all');
+    grunt.registerTask('test:chord', 'simplemocha:chord');
+    grunt.registerTask('test:core', 'simplemocha:core');
+    grunt.registerTask('default', ['verify', 'jsdoc', 'jshint', 'test', 'beautify', 'dist']);
+    grunt.registerTask('tags', function() {
+        shell.exec('cd js && jsctags *.js');
+        shell.exec('cd js/chord && jsctags *.js');
+        shell.exec('cd js/third_party && jsctags *.js');
+    });
 };

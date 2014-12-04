@@ -1,5 +1,11 @@
 /** @fileOverview API for application developers. */
 
+var ConnectionManager = require('../js/connectionmanager.js');
+var Router = require('../js/router.js');
+var sha1 = require('../js/third_party/sha1.js');
+var Chord = require('../js/chord/chord.js');
+var BigInteger = require('../js/third_party/BigInteger.js');
+
 /**
  * @constructor
  * @class This is the top-level API for BOPlish applications. It should be the
@@ -27,13 +33,13 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
         return;
     }
 
-    this.id = sha1.hash(Math.random().toString());
-    var bootstrapHost = bootstrapHost || window.location.host;
+    var id = Chord.randomId();
+    this.id = id.toString();
 
-    if (bootstrapHost.substring(0, bootstrapHost.length - 1) !== '/') { // add trailing slash if missing
+    if (bootstrapHost.substring(bootstrapHost.length - 1, bootstrapHost.length) !== '/') { // add trailing slash if missing
         bootstrapHost += '/';
     }
-    if (bootstrapHost.substring(0, 6) !== 'wss://' || bootstrapHost.substring(0, 5) !== 'ws://') { // check syntax
+    if (bootstrapHost.substring(0, 6) !== 'wss://' && bootstrapHost.substring(0, 5) !== 'ws://') { // check syntax
         errorCallback('Syntax error in bootstrapHost parameter');
         return;
     }
@@ -47,8 +53,9 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
         this._connectionManager.bootstrap(this._router, successCallback, errorCallback);
     }.bind(this);
 
-    this._connectionManager = new ConnectionManager();
-    this._router = new Router(this.id, channel, this._connectionManager);
+    this._connectionManager = new ConnectionManager(channel);
+    //this._router = new Router(this.id, channel, this._connectionManager);
+    this._router = new Chord(id, channel, this._connectionManager);
 };
 
 BOPlishClient.prototype = {
@@ -87,7 +94,9 @@ BOPlishClient.prototype = {
      * @param payload {Object} The payload to send.
      */
     send: function(to, protocol, payload) {
-        this._router.route(to, protocol, payload);
+        this._router.route(to, protocol, payload, function(err) {
+            console.log("RESULT: " + err);
+        });
     },
     /**
      * Installs a handler for the given protocol name.

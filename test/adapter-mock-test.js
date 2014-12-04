@@ -29,7 +29,7 @@ describe('Adapter-Mock', function(){
         rtc2 = new adapter.RTCPeerConnection({});
         describe('Peer2#setRemoteDescription', function(){
             it('should connect', function(){
-                rtc2.setRemoteDescription(new RTCSessionDescription(desc1));
+                rtc2.setRemoteDescription(new adapter.RTCSessionDescription(desc1));
                 rtc2.should.have.property('remote', rtc1);
             });
         });
@@ -50,7 +50,7 @@ describe('Adapter-Mock', function(){
         });
         describe('Peer1#setRemoteDescription', function(){
             it('should set the remote mocked channel and connect the two Peers', function(){
-                rtc1.setRemoteDescription(new RTCSessionDescription(desc2));
+                rtc1.setRemoteDescription(new adapter.RTCSessionDescription(desc2));
                 rtc1.should.have.property('remote', rtc2).and.should.not.equal(rtc1);
             });
         });
@@ -102,12 +102,12 @@ describe('Adapter-Mock', function(){
                     desc1 = desc;
                     rtc1.setLocalDescription(desc1);
                 });
-                rtc2.setRemoteDescription(new RTCSessionDescription(desc1));
+                rtc2.setRemoteDescription(new adapter.RTCSessionDescription(desc1));
                 rtc2.createAnswer(function(desc){
                     desc2 = desc;
                     rtc2.setLocalDescription(desc2);
                 });
-                rtc1.setRemoteDescription(new RTCSessionDescription(desc2));
+                rtc1.setRemoteDescription(new adapter.RTCSessionDescription(desc2));
             });
             it('should be able to send a message from peer1 to peer2', function(done){
                 var testmsg = 'testmsg from peer1 to peer2';

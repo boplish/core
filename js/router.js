@@ -1,5 +1,10 @@
 /** @fileOverview Routing functionality */
 
+var Peer = require('./peer.js');
+var BigInteger = require('./third_party/BigInteger.js');
+var Sha1 = require('./third_party/sha1.js');
+var Range = require('./chord/range.js');
+
 /**
  * @constructor
  * @class The main routing class. Used by {@link ConnectionManager} instances to route
@@ -8,7 +13,7 @@
  * @param id ID of the local peer
  * @param fallbackSignaling
  */
-Router = function(id, fallbackSignaling, connectionManager) {
+var Router = function(id, fallbackSignaling, connectionManager) {
     if (!(this instanceof Router)) {
         return new Router();
     }
@@ -17,12 +22,19 @@ Router = function(id, fallbackSignaling, connectionManager) {
     this._fallbackSignaling = fallbackSignaling;
     this._fallbackSignaling.onmessage = this.onmessage.bind(this);
     this._connectionManager = connectionManager;
-    this._id = id;
+    this.id = id;
     this._messageCallbacks = {};
     this._monitorCallback = null;
-    this.registerDeliveryCallback('discovery', this._onDiscoveryMessage.bind(this));
+    this._pendingPutRequests = {};
+    this._pendingGetRequests = {};
+    this.registerDeliveryCallback('discovery-protocol', this._onDiscoveryMessage.bind(this));
 
     return this;
+};
+
+Router.randomId = function() {
+    var randomId = Sha1.bigIntHash(Math.random().toString());
+    return randomId;
 };
 
 Router.prototype = {
@@ -33,13 +45,16 @@ Router.prototype = {
      * @param peer {Peer} The peer to add.
      * @todo add test for onclosedconnection behaviour
      */
-    addPeer: function(peer) {
+    addPeer: function(peer, cb) {
         this._peerTable[peer.id] = peer;
-        peer.dataChannel.onmessage = this.onmessage.bind(this);
-        peer.peerConnection.onclosedconnection = this.removePeer.bind(this, peer);
+        peer.onmessage = this.onmessage.bind(this);
+        peer.onclose = this.removePeer.bind(this, peer);
         if (Object.keys(this._peerTable).length === 1) {
             // ask first peer for its neighbours
             this._discoverNeighbours(peer);
+        }
+        if (typeof(cb) === 'function') {
+            cb();
         }
     },
 
@@ -84,11 +99,14 @@ Router.prototype = {
      * @param type the message type
      * @param payload the message payload
      */
-    route: function(to, type, payload) {
+    route: function(to, payload) {
+        if (typeof(to) !== 'string') {
+            to = to.toString();
+        }
         this.forward({
             to: to,
-            from: this._id,
-            type: type,
+            from: this.id.toString(),
+            type: 'ROUTE',
             payload: payload
         });
     },
@@ -107,7 +125,7 @@ Router.prototype = {
         if (!msg.to) {
             throw Error('Unable to route message because no recipient can be determined');
         }
-        if (this._id === msg.to) {
+        if (this.id.toString() === msg.to) {
             this.deliver(msg);
             return;
         }
@@ -117,10 +135,117 @@ Router.prototype = {
             return;
         }
         try {
-            receiver.dataChannel.send(JSON.stringify(msg));
+            receiver.send(msg);
         } catch (e) {
             console.log('Unable to route message to ' + msg.to + ' because the DataChannel connection failed.');
         }
+    },
+
+    get: function(hash, cb) {
+        this._pendingGetRequests[hash.toString()] = cb;
+        var peer = this.responsible(hash);
+        this.forward({
+            to: peer.toString(),
+            from: this.id.toString(),
+            type: 'GET',
+            payload: {
+                type: 'request',
+                hash: hash.toString()
+            }
+        });
+    },
+
+    _handleGET: function(msg) {
+        if (msg.payload.type === 'request') {
+            this._handleGetRequest(msg);
+        } else if (msg.payload.type === 'response') {
+            this._handleGetResponse(msg);
+        } else {
+            console.log('received invalid GET message', msg);
+        }
+    },
+
+    _handleGetRequest: function(msg) {
+        try {
+            var val = JSON.parse(localStorage.getItem(msg.payload.hash));
+            this.forward({
+                to: msg.from,
+                from: this.id.toString(),
+                type: 'GET',
+                payload: {
+                    type: 'response',
+                    hash: msg.payload.hash,
+                    val: val
+                }
+            });
+        } catch (e) {
+            console.log(e);
+        }
+    },
+
+    _handleGetResponse: function(msg) {
+        if (typeof(this._pendingGetRequests[msg.payload.hash]) === 'function') {
+            this._pendingGetRequests[msg.payload.hash.toString()](null, msg.payload.val);
+            delete this._pendingGetRequests[msg.payload.hash.toString()];
+        }
+    },
+
+    put: function(hash, val, cb) {
+        this._pendingPutRequests[hash.toString()] = cb;
+        var peer = this.responsible(hash);
+        this.forward({
+            to: peer.toString(),
+            from: this.id.toString(),
+            type: 'PUT',
+            payload: {
+                type: 'request',
+                hash: hash.toString(),
+                val: val
+            }
+        });
+    },
+
+    _handlePUT: function(msg) {
+        if (msg.payload.type === 'request') {
+            this._handlePutRequest(msg);
+        } else if (msg.payload.type === 'response') {
+            this._handlePutResponse(msg);
+        } else {
+            console.log('received invalid PUT message', msg);
+        }
+    },
+
+    _handlePutRequest: function(msg) {
+        try {
+            localStorage.setItem(msg.payload.hash, JSON.stringify(msg.payload.val));
+            this.forward({
+                to: msg.from,
+                from: this.id.toString(),
+                type: 'PUT',
+                payload: {
+                    type: 'response',
+                    hash: msg.payload.hash
+                }
+            });
+        } catch (e) {
+            console.log(e);
+        }
+    },
+
+    _handlePutResponse: function(msg) {
+        if (typeof(this._pendingPutRequests[msg.payload.hash]) === 'function') {
+            this._pendingPutRequests[msg.payload.hash](null);
+        }
+    },
+
+    responsible: function(hash) {
+        var candidate = this.id;
+        for (var k in this._peerTable) {
+            if (Range.inLeftClosedInterval(new BigInteger(k), hash, candidate)) {
+                candidate = new BigInteger(k);
+            }
+        }
+        return candidate;
     },
 
     /**
@@ -133,10 +258,27 @@ Router.prototype = {
      * @param msg {String}
      */
     deliver: function(msg) {
-        try {
-            this._messageCallbacks[msg.type](msg.payload, msg.from);
-        } catch (e) {
-            console.log('Unable to handle message of type ' + msg.type + ' from ' + msg.from + ' because no callback is registered: ' + e);
+        switch (msg.type) {
+            case 'ROUTE':
+                try {
+                    this._messageCallbacks[msg.payload.type](msg.payload);
+                } catch (e) {
+                    console.log(msg);
+                    console.log('Unable to handle message of type ' + msg.payload.type + ' from ' + msg.payload.from + ' because no callback is registered: ' + e);
+                }
+                break;
+            case 'ACK':
+                // silently discard ACK messages as they 
+                // are only used for the Chord implementation
+                break;
+            case 'GET':
+                this._handleGET(msg);
+                break;
+            case 'PUT':
+                this._handlePUT(msg);
+                break;
+            default:
+                console.log('Discarding message', msg, 'because the type is unknown');
         }
     },
 
@@ -173,37 +315,48 @@ Router.prototype = {
      * @todo implement
      */
     _discoverNeighbours: function(peer) {
-        this.route(peer.id, 'discovery', {
-            type: 'request'
+        this.route(peer.id, {
+            type: 'discovery-protocol',
+            payload: {
+                type: 'request',
+                from: this.id.toString()
+            }
         });
     },
 
-    _onDiscoveryMessage: function(msg, from) {
-        switch (msg.type) {
-            case 'answer':
-                this._processDiscoveryAnswer(msg, from);
+    _onDiscoveryMessage: function(msg) {
+        switch (msg.payload.type) {
+            case 'response':
+                this._processDiscoveryResponse(msg);
                 break;
             case 'request':
-                this._processDiscoveryRequest(msg, from);
+                this._processDiscoveryRequest(msg);
                 break;
             default:
-                console.log('Router: received invalid discovery message with type %s from %s', msg.type, from);
+                console.log('Router: received invalid discovery message with type %s from %s', msg.payload.type, msg.payload.from);
                 break;
         }
     },
 
     /**
-     * Gets called when a neighbour discovery answer message is received.
+     * Gets called when a neighbour discovery response message is received.
      *
      * @param msg {String} Message containing ids of another peers peer table.
      * @todo should this call the connection manager?
      */
-    _processDiscoveryAnswer: function(msg, from) {
-        var i, ids = msg.ids;
+    _processDiscoveryResponse: function(msg) {
+        //console.log('connecting to', msg.payload.ids)
+        var i, ids = msg.payload.ids;
         for (i = 0; i < ids.length; i++) {
-            if (ids[i] !== this._id) {
-                this._connectionManager.connect(ids[i]);
+            if (ids[i] !== this.id.toString()) {
+                this._connectionManager.connect(ids[i], this._processDiscoveryCallback.bind(this, ids[i]));
             }
+        }
+    },
+
+    _processDiscoveryCallback: function(id, err) {
+        if (err) {
+            console.log('Error connecting to', id, ':', err);
         }
     },
 
@@ -214,7 +367,7 @@ Router.prototype = {
      * @param msg {String} Message containing the discovery request from another peer.
      * @todo discovery message format
      */
-    _processDiscoveryRequest: function(msg, from) {
+    _processDiscoveryRequest: function(msg) {
         var peerIds = [],
             peer;
         for (peer in this._peerTable) {
@@ -222,9 +375,13 @@ Router.prototype = {
                 peerIds.push(peer);
             }
         }
-        this.route(from, 'discovery', {
-            type: 'answer',
-            ids: peerIds
+        this.route(msg.payload.from, {
+            type: 'discovery-protocol',
+            payload: {
+                type: 'response',
+                from: this.id.toString(),
+                ids: peerIds
+            }
         });
     }
 };

@@ -1,5 +1,6 @@
 #!/bin/sh
 # stash unstaged changes, run verify task and restore stashed files
+PATH="/usr/local/bin:$PATH"
 
 NAME=$(git branch | grep '*' | sed 's/* //')
 
@@ -13,9 +14,9 @@ then
 
   if [ $RETVAL -ne 0 ]
   then
+  	git stash pop -q
     exit 1
   fi
 
-  git add .
   git stash pop -q
 fi
