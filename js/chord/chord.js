@@ -59,7 +59,7 @@ var Chord = function(id, fallbackSignaling, connectionManager, maxFingerTableEnt
         this._fingerTable[k] = {
             k: k,
             start: memoizer.bind(null, k),
-            node: this._localNode._successor
+            node: this._localNode
         };
     }
 
@@ -475,10 +475,11 @@ Chord.prototype.route = function(to, message, callback) {
 
     function route(to, message, callback) {
         self._monitorCallback(message);
-        if (to === "*") {
+        if (to === "*" || (message.type === 'signaling-protocol' && !to.equals(self._localNode.id()))) {
+            // outgoing signaling messages go to bootstrap server
             self.log("routing (" + [message.type, message.seqnr].join(", ") + ") to signaling server");
             self._localNode.route(to, message, callback);
-        } else if (self.id.equals(to)) {
+        } else if (self._localNode.responsible(to)) {
             try {
                 self.log("(" + [message.type, message.seqnr].join(", ") + ") is for me");
                 self._messageCallbacks[message.type](message);
@@ -487,19 +488,15 @@ Chord.prototype.route = function(to, message, callback) {
                 self.log("Error handling message: ", e);
                 callback("Error handling message: " + e);
             }
-        } else if (Range.inOpenInterval(to, self._localNode.predecessor_id(), self.id)) {
-            self.log("routing (" + [message.type, message.payload.type, message.seqnr].join(", ") + ") to " + to.toString() + " through signaling server");
-            self._localNode.route(to, message, callback);
         } else {
-            if (message.type === 'signaling-protocol') {
-                // we need to route offer/answer packets through the server to avoid
-                // endless route loops
-                self._localNode.route(to, message, callback);
-            } else {
-                console.log("asking finger table where to route the message to " + to.toString());
-                var nextHop = self._closest_preceding_finger(to).route(to, message, callback);
-                self.log("routing (" + [message.type, message.payload.type, message.seqnr].join(", ") + ") to " + nextHop.toString());
+            // route using finger table
+            var nextHop = self._closest_preceding_finger(to);
+            if (nextHop === self._localNode) {
+                // finger table is intialy filled with localnode, make sure not to route to myself
+                var nextHop = self._localNode._successor;
             }
+            self.log("routing (" + [message.type, message.payload.type, message.seqnr].join(", ") + ") to " + nextHop.id().toString());
+            nextHop.route(to, message, callback);
         }
     }
 };
