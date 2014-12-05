@@ -435,6 +435,35 @@ Chord.prototype._validateKey = function(key) {
 };
 
 /**
+ * Store a string-based key in the DHT. The key is created by
+ * hashing it using SHA-1 and calculating modulo `2^m` to fit
+ * it into our key space.
+ *
+ * @param stringKey {String}
+ * @param value
+ * @param callback
+ */
+Chord.prototype.store = function(stringKey, value, callback) {
+    var hash = Sha1.bigIntHash(stringKey);
+    var key = hash.mod(BigInteger(2).pow(this._m));
+    this._put(key, value, callback);
+};
+
+/**
+ * Retrieve a value from the DHT using a string-based key.
+ * Should be used in conjungtion with `Chord#store()`.
+ *
+ * @param stringKey {String}
+ * @param value
+ * @param callback
+ */
+Chord.prototype.retrieve = function(stringKey, callback) {
+    var hash = Sha1.bigIntHash(stringKey);
+    var key = hash.mod(BigInteger(2).pow(this._m));
+    this._get(key, callback);
+};
+
+/**
  * Store 'value' under 'key' in the DHT
  *
  * @param key
