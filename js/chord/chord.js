@@ -8,7 +8,7 @@ var chordConfig = require('../config.js').chord;
 
 /** @fileOverview Chord DHT implementation */
 
-var _m = 80;
+var _m = 16;
 
 /**
  * @constructor
@@ -47,7 +47,7 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
     this._messageCallbacks = {};
     this._monitorCallback = function() {};
     this._fingerTable = {};
-    this._maxFingerTableEntries = chordConfig.maxFingerTableEntries || 10;
+    //this._maxFingerTableEntries = chordConfig.maxFingerTableEntries || 10;
     this._maxPeerConnections = chordConfig.maxPeerConnections || 15;
     this._joining = false;
     this.debug = chordConfig.debug || false;
@@ -56,8 +56,8 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
     this._helper = Helper;
 
     var memoizer = Helper.memoize(Helper.fingerTableIntervalStart.bind(this));
-    for (var i = 1; i <= this._maxFingerTableEntries; i++) {
-        var k = 1 + (i - 1) * Math.round(_m / this._maxFingerTableEntries);
+    for (var i = 1; i <= _m; i++) {
+        var k = 1 + (i - 1);
         this._fingerTable[k] = {
             k: k,
             start: memoizer.bind(null, k),
