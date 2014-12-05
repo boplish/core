@@ -123,7 +123,7 @@ var Helper = {
 Chord.prototype._closest_preceding_finger = function(id) {
     var i;
     for (i = this._m; i >= 1; i--) {
-        if (this._fingerTable[i] && Range.inOpenInterval(this._fingerTable[i].node.id(), this.id, id)) {
+        if (this._fingerTable[i] && this._fingerTable[i] !== this._localNode && Range.inOpenInterval(this._fingerTable[i].node.id(), this.id, id)) {
             return this._fingerTable[i].node;
         }
     }
@@ -277,7 +277,11 @@ Chord.prototype.find_predecessor = function(id, callback) {
             predecessor: self._localNode.id()
         });
     } else {
-        self._closest_preceding_finger(id).find_predecessor(id, callback);
+        var nextHop = self._closest_preceding_finger(id);
+        if (nextHop.id().equals(self.id)) {
+            nextHop = self._localNode._successor;
+        }
+        nextHop.find_predecessor(id, callback);
     }
 };
 
