@@ -7,7 +7,7 @@ var sinon = require('sinon');
 var ConnectionManager = require('../js/connectionmanager.js');
 var BigInteger = require('../js/third_party/BigInteger.js');
 var config = require('../js/config');
-config.peer.defaultMessageTimeout = 10;
+config.messageTimeout = 10;
 
 var RouterAPI = {
     registerDeliveryCallback: function() {},
