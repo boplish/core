@@ -8,7 +8,8 @@ var Router = require('./chord/chord.js');
 var BigInteger = require('./third_party/BigInteger.js');
 var BopURI = require('./bopuri.js');
 var Scribe = require('./scribe.js');
-var bopclientConfig = require('./config.js').bopclient;
+var config = require('./config.js');
+var bopclientConfig = config.bopclient;
 
 /**
  * @constructor
@@ -229,6 +230,8 @@ BOPlishClient.prototype = {
 };
 
 BOPlishClient.BopURI = BopURI;
+
+BOPlishClient.config = config;
 
 if (typeof(module) !== 'undefined') {
     module.exports = BOPlishClient;
