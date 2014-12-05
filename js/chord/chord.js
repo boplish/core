@@ -19,10 +19,6 @@ var _m = chordConfig.m || 16;
  * server
  * @param connectionManager {ConnectionManager} The connection manager instance
  * to be used for requesting data channel connections.
- * @param maxFingerTableEntries {Number} The maximum number of entries that this
- * chord peer shall keep in the finger table. If this number is less than the
- * number of identifier bits (m; which is usually 160), the entries are evenly
- * distributed across the complete finger table. Default is 10.
  */
 var Chord = function(id, fallbackSignaling, connectionManager) {
     if (!(this instanceof Chord)) {
@@ -35,8 +31,10 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
 
     Helper.defineProperties(this);
 
+    this._m = chordConfig.maxFingerTableEntries || 10;
+
     if (!id) {
-        id = Chord.randomId();
+        id = Chord.randomId(this._m);
     }
 
     this._localNode = new ChordNode(new Peer(id, null, fallbackSignaling), this, true);
@@ -47,7 +45,6 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
     this._messageCallbacks = {};
     this._monitorCallback = function() {};
     this._fingerTable = {};
-    //this._maxFingerTableEntries = chordConfig.maxFingerTableEntries || 10;
     this._maxPeerConnections = chordConfig.maxPeerConnections || 15;
     this._joining = false;
     this.debug = chordConfig.debug || false;
@@ -56,11 +53,10 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
     this._helper = Helper;
 
     var memoizer = Helper.memoize(Helper.fingerTableIntervalStart.bind(this));
-    for (var i = 1; i <= _m; i++) {
-        var k = 1 + (i - 1);
-        this._fingerTable[k] = {
-            k: k,
-            start: memoizer.bind(null, k),
+    for (var i = 1; i <= this._m; i++) {
+        this._fingerTable[i] = {
+            i: i,
+            start: memoizer.bind(null, i),
             node: this._localNode
         };
     }
@@ -348,7 +344,7 @@ Chord.prototype.stabilize = function() {
     // check if successor is still up if it's not me and update succesor list
     if (!self._localNode.successor_id().equals(self._localNode.id())) {
         self._localNode._successor._peer.sendHeartbeat(function(err) {
-            if (!!err && self._successorList.length <= 0) {
+            if ( !! err && self._successorList.length <= 0) {
                 self.log('successor failed, cannot recover. RESETTING');
                 // @todo: we might be able to recover using a node in `self._remotes`
                 // @todo: do we have to cleanup the remotes?
@@ -357,7 +353,7 @@ Chord.prototype.stabilize = function() {
                 self._localNode._predecessor = null;
                 self.stabilize();
                 return;
-            } else if (!!err && self._successorList.length > 0) {
+            } else if ( !! err && self._successorList.length > 0) {
                 // successor failed, we can recover using the successor list
                 var new_suc_id = self._successorList[Math.floor(Math.random() * self._successorList.length)];
                 self.log('successor down, trying to recover using', new_suc_id.toString());
@@ -467,7 +463,7 @@ Chord.prototype.route = function(to, message, callback) {
                 if (err) {
                     callback('Error from RouteInterceptor: ' + err);
                     return;
-                } else if (!!drop) {
+                } else if ( !! drop) {
                     self.log('RouteInterceptor dropped message', JSON.stringify(_rawMsg));
                     callback(null);
                     return;
@@ -542,10 +538,9 @@ Chord.prototype.getPeerIds = function() {
     return peers;
 };
 
-Chord.randomId = function() {
+Chord.randomId = function(m) {
     var randomId = Sha1.bigIntHash(Math.random().toString());
-    randomId = randomId.mod(BigInteger(2).pow(_m));
-    return randomId;
+    return randomId.mod(BigInteger(2).pow(BigInteger(m)));
 };
 
 if (typeof(module) !== 'undefined') {
