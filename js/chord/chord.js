@@ -8,8 +8,6 @@ var chordConfig = require('../config.js').chord;
 
 /** @fileOverview Chord DHT implementation */
 
-var _m = chordConfig.m || 16;
-
 /**
  * @constructor
  * @class This is a Chord DHT implementation using WebRTC data channels.
@@ -87,7 +85,7 @@ var Helper = {
     },
 
     fingerTableIntervalStart: function(k) {
-        return this.id.add(BigInteger(2).pow(k - 1)).mod(BigInteger(2).pow(_m));
+        return this.id.add(BigInteger(2).pow(k - 1)).mod(BigInteger(2).pow(this._m));
     },
 
     defineProperties: function(object) {
@@ -344,7 +342,7 @@ Chord.prototype.stabilize = function() {
     // check if successor is still up if it's not me and update succesor list
     if (!self._localNode.successor_id().equals(self._localNode.id())) {
         self._localNode._successor._peer.sendHeartbeat(function(err) {
-            if ( !! err && self._successorList.length <= 0) {
+            if (!!err && self._successorList.length <= 0) {
                 self.log('successor failed, cannot recover. RESETTING');
                 // @todo: we might be able to recover using a node in `self._remotes`
                 // @todo: do we have to cleanup the remotes?
@@ -353,7 +351,7 @@ Chord.prototype.stabilize = function() {
                 self._localNode._predecessor = null;
                 self.stabilize();
                 return;
-            } else if ( !! err && self._successorList.length > 0) {
+            } else if (!!err && self._successorList.length > 0) {
                 // successor failed, we can recover using the successor list
                 var new_suc_id = self._successorList[Math.floor(Math.random() * self._successorList.length)];
                 self.log('successor down, trying to recover using', new_suc_id.toString());
@@ -463,7 +461,7 @@ Chord.prototype.route = function(to, message, callback) {
                 if (err) {
                     callback('Error from RouteInterceptor: ' + err);
                     return;
-                } else if ( !! drop) {
+                } else if (!!drop) {
                     self.log('RouteInterceptor dropped message', JSON.stringify(_rawMsg));
                     callback(null);
                     return;

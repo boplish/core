@@ -4,14 +4,14 @@ var config = {
     },
     connectionManager: {
         // pcoptions: { iceServers: [{
-        // 		"url": "stun:stun.l.google.com:19302"
+        //              "url": "stun:stun.l.google.com:19302"
         // }]},
         // dcoptions: {}
     },
     chord: {
         // debug: false,
         // maxPeerConnections: 15,
-        // m: 16,
+        // maxFingerTableEntries: 10,
         // stabilizeInterval: 1000
         // fixFingersInterval: 1000
     },
@@ -23,6 +23,6 @@ var config = {
         // joinTrials: 3
         // bopid: {random}
     }
-}
+};
 
 module.exports = config;
