@@ -8,7 +8,7 @@ var chordConfig = require('../config.js').chord;
 
 /** @fileOverview Chord DHT implementation */
 
-var _m = 16;
+var _m = chordConfig.m || 16;
 
 /**
  * @constructor

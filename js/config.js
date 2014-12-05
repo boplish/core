@@ -11,7 +11,7 @@ var config = {
     chord: {
         // debug: false,
         // maxPeerConnections: 15,
-        // maxFingerTableEntries: 10,
+        // m: 16,
         // stabilizeInterval: 1000
         // fixFingersInterval: 1000
     },
