@@ -139,7 +139,7 @@ Chord.prototype._fix_fingers = function() {
     self.find_successor(start, function(err, msg) {
         if (err) {
             console.log('Error during fix_fingers:', err);
-        } else if (msg.successor.equals(self._localNode.id())) {
+        } else if (msg.successor.equals(self.id)) {
             // we are the successor
             self._fingerTable[i].node = self._localNode;
         } else {
@@ -202,7 +202,7 @@ Chord.prototype.join = function(bootstrapPeer, callback) {
             return;
         }
         self.log("My bootstrap peer is " + bootstrapNode.id().toString());
-        bootstrapNode.find_predecessor(self._localNode.id().plus(1), function(err, res) {
+        bootstrapNode.find_predecessor(self.id.plus(1), function(err, res) {
             if (err) {
                 self._joining = false;
                 callback("Could not find a successor: " + err);
@@ -230,11 +230,11 @@ Chord.prototype.updateSuccessorList = function(cb) {
     var newSuccessorList = [];
     // fill up successorList with the next two peers behind successor (if it's not me)
     self._localNode._successor.find_predecessor(self._localNode.successor_id().plus(1), function(err, res) {
-        if (!err && !res.successor.equals(self._localNode.id())) {
+        if (!err && !res.successor.equals(self.id)) {
             newSuccessorList.push(res.successor);
             self._successorList = newSuccessorList;
             self._localNode._successor.find_predecessor(res.successor.plus(1), function(err, res) {
-                if (!err && !res.successor.equals(self._localNode.id())) {
+                if (!err && !res.successor.equals(self.id)) {
                     newSuccessorList.push(res.successor);
                     self._successorList = newSuccessorList;
                     cb(null, self._successorList);
@@ -259,22 +259,22 @@ Chord.prototype.find_successor = function(id, callback) {
 Chord.prototype.find_predecessor = function(id, callback) {
     var self = this;
 
-    if (Range.inRightClosedInterval(id, self._localNode.id(), self._localNode.successor_id())) {
+    if (Range.inRightClosedInterval(id, self.id, self._localNode.successor_id())) {
         callback(null, {
-            predecessor: self._localNode.id(),
+            predecessor: self.id,
             successor: self._localNode.successor_id()
         });
     } else if (self._localNode.responsible(id)) {
         callback(null, {
             predecessor: self._localNode.predecessor_id(),
-            successor: self._localNode.id()
+            successor: self.id
         });
-    } else if (self._localNode.id().equals(self._localNode.successor_id())) {
+    } else if (self.id.equals(self._localNode.successor_id())) {
         // inconsistent successor pointer, cannot answer this correctly
         // maybe i am the only one in the ring
         callback(null, {
-            successor: self._localNode.id(),
-            predecessor: self._localNode.id()
+            successor: self.id,
+            predecessor: self.id
         });
     } else {
         var nextHop = self._closest_preceding_finger(id);
@@ -287,7 +287,7 @@ Chord.prototype.find_predecessor = function(id, callback) {
 
 Chord.prototype.connect = function(id, callback) {
     var self = this;
-    if (id.equals(self._localNode.id())) {
+    if (id.equals(self.id)) {
         callback('cannot connect to myself');
         return;
     }
@@ -341,7 +341,7 @@ Chord.prototype.stabilize = function() {
     self._stabilizeTimer = clearTimeout(self._stabilizeTimer);
 
     // check if pre is still up if it's not unset
-    if (!self._localNode.predecessor_id().equals(self._localNode.id())) {
+    if (!self._localNode.predecessor_id().equals(self.id)) {
         self._localNode._predecessor._peer.sendHeartbeat(function(err) {
             if (err) {
                 self.log('predecessor down - removed it');
@@ -352,7 +352,7 @@ Chord.prototype.stabilize = function() {
     }
 
     // check if successor is still up if it's not me and update succesor list
-    if (!self._localNode.successor_id().equals(self._localNode.id())) {
+    if (!self._localNode.successor_id().equals(self.id)) {
         self._localNode._successor._peer.sendHeartbeat(function(err) {
             if (!!err && self._successorList.length <= 0) {
                 self.log('successor failed, cannot recover. RESETTING');
@@ -384,7 +384,7 @@ Chord.prototype.stabilize = function() {
                 // successor is up, check if someone smuggled in between (id, successor_id]
                 // or if successor.predecessor == successor (special case when predecessor is unknown)
                 self._localNode._successor.find_predecessor(self._localNode.successor_id(), function(err, res) {
-                    if (!err && Range.inOpenInterval(res.predecessor, self._localNode.id(), self._localNode.successor_id())) {
+                    if (!err && Range.inOpenInterval(res.predecessor, self.id, self._localNode.successor_id())) {
                         self.log('we have a successor in (myId, sucId), it becomes our new successor');
                         self.connect(res.predecessor, function(err, suc_pre_node) {
                             if (!err) {
@@ -403,7 +403,7 @@ Chord.prototype.stabilize = function() {
                 // update successor list if everything is allright
                 self.updateSuccessorList(function() {});
                 // notify our successor of us
-                self._localNode._successor.notify(self._localNode.id(), function() {});
+                self._localNode._successor.notify(self.id, function() {});
             }
         });
     } else {
@@ -492,7 +492,7 @@ Chord.prototype.route = function(to, message, callback) {
 
     function route(to, message, callback) {
         self._monitorCallback(message);
-        if (to === "*" || (message.type === 'signaling-protocol' && !to.equals(self._localNode.id()))) {
+        if (to === "*" || (message.type === 'signaling-protocol' && !to.equals(self.id))) {
             // outgoing signaling messages go to bootstrap server
             self.log("routing (" + [message.type, message.seqnr].join(", ") + ") to signaling server");
             self._localNode.route(to, message, callback);
@@ -510,7 +510,7 @@ Chord.prototype.route = function(to, message, callback) {
             var nextHop = self._closest_preceding_finger(to);
             if (nextHop === self._localNode) {
                 // finger table is intialy filled with localnode, make sure not to route to myself
-                if (nextHop.id().equals(self._localNode.id())) {
+                if (nextHop.id().equals(self.id)) {
                     // we do not know our successor, drop message and error out
                     return callback('Could not route message');
                 } else {

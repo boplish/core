@@ -59,7 +59,7 @@ Scribe.prototype = {
         var arr = [];
         for (var group in self._subscriptions) {
             for (var subId in self._subscriptions[group]) {
-                if (subId === self._router._localNode.id().toString()) {
+                if (subId === self._router.id.toString()) {
                     var groupname = self._mySubscriptions[group];
                     if (groupname) { // group might not yet be removed 
                         arr.push(groupname);
@@ -104,7 +104,7 @@ Scribe.prototype = {
             throw Error('Malformed send request');
         }
         self._router.route(to, {
-            from: self._router._localNode.id(),
+            from: self._router.id,
             type: 'bopscribe-protocol',
             payload: msg
         }, cb);
@@ -125,7 +125,7 @@ Scribe.prototype = {
         var hash = Sha1.bigIntHash(groupId);
         self._router.put(hash, {
             groupId: groupId,
-            creator: self._router._localNode.id().toString(),
+            creator: self._router.id.toString(),
             createdOn: Date.now()
         }, function(err, res) {
             if (!err) {
@@ -150,7 +150,7 @@ Scribe.prototype = {
 
         self._send(hash, {
             type: self._messageTypes.LEAVE,
-            peerId: self._router._localNode.id().toString()
+            peerId: self._router.id.toString()
         }, function(err, msg) {
             if (err) {
                 return cb(err);
@@ -189,7 +189,7 @@ Scribe.prototype = {
             // @todo: check if groupId is a valid bopuri
             return cb('Discarding message as no groupId has been specified');
         }
-        var peerId = self._router._localNode.id();
+        var peerId = self._router.id;
         var groupHash = Sha1.bigIntHash(groupId);
 
         self._send(groupHash, {
@@ -222,7 +222,7 @@ Scribe.prototype = {
         };
         if (!self._router._localNode.responsible(groupHash)) {
             // propagate subscribe if i am not the rendezvous point
-            protoPayload.from = self._router._localNode.id().toString();
+            protoPayload.from = self._router.id.toString();
             next(null, msg, false);
         } else {
             // we are the rendezvous point - drop message
@@ -245,7 +245,7 @@ Scribe.prototype = {
         if (self._subscriptions[groupHash] && Object.keys(self._subscriptions[groupHash]).length <= 0) {
             return console.log('no subscribers for', groupHash.toString());
         }
-        self._send(self._router._localNode.id(), {
+        self._send(self._router.id, {
             type: self._messageTypes.MESSAGE,
             groupHash: groupHash.toString(),
             payload: protoPayload.payload
@@ -288,7 +288,7 @@ Scribe.prototype = {
         // propagate message subscribers of the group
         for (var index in self._subscriptions[groupHashStr]) {
             var peerId = self._subscriptions[groupHashStr][index].peerId;
-            if (peerId.equals(self._router._localNode.id())) {
+            if (peerId.equals(self._router.id)) {
                 // its for me, deliver to application
                 self.onmessage(self._mySubscriptions[msg.groupHash], payload);
             } else {
