@@ -500,7 +500,12 @@ Chord.prototype.route = function(to, message, callback) {
             var nextHop = self._closest_preceding_finger(to);
             if (nextHop === self._localNode) {
                 // finger table is intialy filled with localnode, make sure not to route to myself
-                nextHop = self._localNode._successor;
+                if (nextHop.id().equals(self._localNode.id())) {
+                    // we do not know our successor, drop message and error out
+                    return callback('Could not route message');
+                } else {
+                    nextHop = self._localNode._successor;
+                }
             }
             self.log("routing (" + [message.type, message.payload.type, message.seqnr].join(", ") + ") to " + nextHop.id().toString());
             nextHop.route(to, message, callback);
