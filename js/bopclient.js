@@ -100,9 +100,9 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
                 errorCallback(err);
             }
         }
-        this._router.put(sha1.bigIntHash(this.bopid), auth, errorHandler);
+        this._router.put(sha1.bigIntHash(this.bopid).mod(BigInteger(2).pow(this._router._m)), auth, errorHandler);
         setInterval(function() {
-            this._router.put(sha1.bigIntHash(this.bopid), auth, errorHandler);
+            this._router.put(sha1.bigIntHash(this.bopid).mod(BigInteger(2).pow(this._router._m)), auth, errorHandler);
         }.bind(this), 2000);
         successCallback();
     }
@@ -187,7 +187,7 @@ BOPlishClient.prototype = {
             from: this.bopid,
             type: protocolIdentifier
         };
-        var bopidHash = sha1.bigIntHash(bopid);
+        var bopidHash = sha1.bigIntHash(bopid).mod(BigInteger(2).pow(this._router._m));
 
         this._router.get(bopidHash, function(err, auth) {
             if (err) {
@@ -201,13 +201,13 @@ BOPlishClient.prototype = {
     },
 
     _get: function(hashString, cb) {
-        var hash = sha1.bigIntHash(hashString);
+        var hash = sha1.bigIntHash(hashString).mod(BigInteger(2).pow(this._router._m));
         this._router.get(hash, cb);
     },
 
     _put: function(hashString, value, cb) {
-        var hash = sha1.bigIntHash(hashString);
-        this._router.put(sha1.bigIntHash(hashString), value, cb);
+        var hash = sha1.bigIntHash(hashString).mod(BigInteger(2).pow(this._router._m));
+        this._router.put(hash, value, cb);
     },
 
     /**

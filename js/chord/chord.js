@@ -451,7 +451,7 @@ Chord.prototype.put = function(key, value, callback) {
 };
 
 Chord.prototype.get = function(key, callback) {
-    validateKey(key);
+    this._validateKey(key);
     var val;
     if (this._localNode.responsible(key)) {
         val = this._localNode.get_from_store(key);
@@ -462,7 +462,7 @@ Chord.prototype.get = function(key, callback) {
 };
 
 Chord.prototype.remove = function(key) {
-    validateKey(key);
+    this._validateKey(key);
     // TODO: implement
 };
 
