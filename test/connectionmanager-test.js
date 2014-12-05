@@ -6,8 +6,8 @@ var Mocks = require('./adapter-mock.js');
 var sinon = require('sinon');
 var ConnectionManager = require('../js/connectionmanager.js');
 var BigInteger = require('../js/third_party/BigInteger.js');
-var config = require('../js/config');
-config.messageTimeout = 10;
+var peerConfig = require('../js/config').peer;
+peerConfig.messageTimeout = 10;
 
 var RouterAPI = {
     registerDeliveryCallback: function() {},
