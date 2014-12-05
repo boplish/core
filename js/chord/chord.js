@@ -436,6 +436,7 @@ Chord.prototype.stabilize = function() {
  * @param value
  */
 Chord.prototype.put = function(key, value, callback) {
+    key = key.mod(BigInteger(2).pow(_m));
     if (this._localNode.responsible(key)) {
         this._localNode.store(key, value);
         callback(null);
@@ -445,6 +446,7 @@ Chord.prototype.put = function(key, value, callback) {
 };
 
 Chord.prototype.get = function(key, callback) {
+    key = key.mod(BigInteger(2).pow(_m));
     var val;
     if (this._localNode.responsible(key)) {
         val = this._localNode.get_from_store(key);
@@ -455,6 +457,7 @@ Chord.prototype.get = function(key, callback) {
 };
 
 Chord.prototype.remove = function(key) {
+    key = key.mod(BigInteger(2).pow(_m));
     // TODO: implement
 };
 
