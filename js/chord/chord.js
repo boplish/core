@@ -464,12 +464,16 @@ Chord.prototype.retrieve = function(stringKey, callback) {
 };
 
 /**
- * Store 'value' under 'key' in the DHT
+ * Store 'value' under 'key' in the DHT.
  *
- * @param key
+ * @param key {String} or {BigInteger}. If key is a string, the SHA1 sum is
+ * calculated from key and a valid ID created.
  * @param value
  */
 Chord.prototype.put = function(key, value, callback) {
+    if (typeof key === 'string') {
+        key = Sha1.bigIntHash(key).mod(BigInteger(2).pow(this._m));
+    }
     this._validateKey(key);
     if (this._localNode.responsible(key)) {
         this._localNode.store(key, value);
@@ -479,7 +483,16 @@ Chord.prototype.put = function(key, value, callback) {
     }
 };
 
+/**
+ * Retrieve a value stored under 'key' in the DHT.
+ *
+ * @param key {String} or {BigInteger}. If key is a string, the SHA1 sum is
+ * calculated from key and a valid ID created.
+ */
 Chord.prototype.get = function(key, callback) {
+    if (typeof key === 'string') {
+        key = Sha1.bigIntHash(key).mod(BigInteger(2).pow(this._m));
+    }
     this._validateKey(key);
     var val;
     if (this._localNode.responsible(key)) {
@@ -491,6 +504,9 @@ Chord.prototype.get = function(key, callback) {
 };
 
 Chord.prototype.remove = function(key) {
+    if (typeof key === 'string') {
+        key = Sha1.bigIntHash(key).mod(BigInteger(2).pow(this._m));
+    }
     this._validateKey(key);
     // TODO: implement
 };

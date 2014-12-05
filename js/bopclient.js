@@ -3,7 +3,6 @@
 
 var bowser = require('bowser');
 var ConnectionManager = require('./connectionmanager.js');
-var sha1 = require('./third_party/sha1.js');
 var Router = require('./chord/chord.js');
 var BigInteger = require('./third_party/BigInteger.js');
 var BopURI = require('./bopuri.js');
@@ -100,9 +99,9 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
                 errorCallback(err);
             }
         }
-        this._router.put(sha1.bigIntHash(this.bopid).mod(BigInteger(2).pow(this._router._m)), auth, errorHandler);
+        this._router.put(this.bopid, auth, errorHandler);
         setInterval(function() {
-            this._router.put(sha1.bigIntHash(this.bopid).mod(BigInteger(2).pow(this._router._m)), auth, errorHandler);
+            this._router.put(this.bopid, auth, errorHandler);
         }.bind(this), 2000);
         successCallback();
     }
@@ -187,27 +186,24 @@ BOPlishClient.prototype = {
             from: this.bopid,
             type: protocolIdentifier
         };
-        var bopidHash = sha1.bigIntHash(bopid).mod(BigInteger(2).pow(this._router._m));
 
-        this._router.get(bopidHash, function(err, auth) {
+        this._router.get(bopid, function(err, auth) {
             if (err) {
                 console.log(err);
             } else if (auth && auth.chordId) {
                 this._router.route(new BigInteger(auth.chordId), msg, function(err) {});
             } else {
-                throw new Error('Malformed response from GET request for ' + bopidHash + '. Returned ' + JSON.stringify(auth));
+                throw new Error('Malformed response from GET request for ' + bopid + '. Returned ' + JSON.stringify(auth));
             }
         }.bind(this));
     },
 
     _get: function(hashString, cb) {
-        var hash = sha1.bigIntHash(hashString).mod(BigInteger(2).pow(this._router._m));
-        this._router.get(hash, cb);
+        this._router.get(hashString, cb);
     },
 
     _put: function(hashString, value, cb) {
-        var hash = sha1.bigIntHash(hashString).mod(BigInteger(2).pow(this._router._m));
-        this._router.put(hash, value, cb);
+        this._router.put(hashString, value, cb);
     },
 
     /**
