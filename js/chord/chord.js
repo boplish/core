@@ -108,6 +108,11 @@ var Helper = {
 
     random: function(min, max) {
         return Math.floor(Math.random() * (max - min + 1) + min);
+    },
+
+    randomFingerTableIndex: function(table) {
+        var keys = Object.keys(table);
+        return keys[Helper.random(0, keys.length)];
     }
 };
 
@@ -123,10 +128,10 @@ Chord.prototype._closest_preceding_finger = function(id) {
 
 Chord.prototype._fix_fingers = function() {
     var self = this;
-    var i = Helper.random(1, self._fingerTableEntries);
-    var key = self._fingerTable[i].start();
+    var i = Helper.randomFingerTableIndex(self._fingerTable),
+        start = self._fingerTable[i].start();
 
-    self.find_successor(key, function(err, msg) {
+    self.find_successor(start, function(err, msg) {
         if (err) {
             console.log('Error during fix_fingers:', err);
         } else if (msg.successor.equals(self._localNode.id())) {
