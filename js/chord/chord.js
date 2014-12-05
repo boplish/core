@@ -29,10 +29,10 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
 
     Helper.defineProperties(this);
 
-    this._m = chordConfig.maxFingerTableEntries || 10;
+    this._m = m();
 
     if (!id) {
-        id = Chord.randomId(this._m);
+        id = Chord.randomId();
     }
 
     this._localNode = new ChordNode(new Peer(id, null, fallbackSignaling), this, true);
@@ -66,6 +66,14 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
 
     return this;
 };
+
+/**
+ * Returns the configured value of m (number of bits in key IDs) or the default.
+ */
+
+function m() {
+    return chordConfig.maxFingerTableEntries || 10;
+}
 
 /**
  * Internal Helper Functions
@@ -536,9 +544,9 @@ Chord.prototype.getPeerIds = function() {
     return peers;
 };
 
-Chord.randomId = function(m) {
+Chord.randomId = function() {
     var randomId = Sha1.bigIntHash(Math.random().toString());
-    return randomId.mod(BigInteger(2).pow(BigInteger(m)));
+    return randomId.mod(BigInteger(2).pow(BigInteger(m())));
 };
 
 if (typeof(module) !== 'undefined') {
