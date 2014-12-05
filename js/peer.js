@@ -1,5 +1,7 @@
 /** @fileOverview Represents a Peer in the network */
 
+var peerConfig = require('./config.js').peer;
+
 /**
  * @constructor
  * @class Represents a foreign Peer. Used by {@link Router} instances to route
@@ -18,7 +20,7 @@ var Peer = function(id, peerConnection, dataChannel) {
     this._peerConnection = peerConnection;
     this._dataChannel = dataChannel;
     this._dataChannel.onmessage = this._onmessage.bind(this);
-    this._heartbeatDefaultTimer = 5000; // default heartbeat timer
+    this._heartbeatDefaultTimer = peerConfig.defaultMessageTimeout;
     this._heartbeatCallbacks = {};
 };
 
