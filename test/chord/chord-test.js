@@ -152,12 +152,25 @@ describe('Chord', function() {
         });
     });
     describe('#join', function() {
+        it('should fail after timeout', function(done) {
+            c.join(new Peer(new BigInteger(1), null, dcStub), function(err) {
+                if (!err) {
+                    sinon.assert.fail(err);
+                } else {
+                    done();
+                }
+            });
+        });
         it('should not allow to be called twice', function(done) {
-            c.join(new Peer(new BigInteger(1), null, dcStub), function() {
-                throw new Error("Success callback called");
+            c.join(new Peer(new BigInteger(1), null, dcStub), function(err) {
+                err.should.not.equal('Already joining');
+                if (!err) {
+                    sinon.assert.fail(err);
+                }
             });
             c.join(new Peer(new BigInteger(1), null, dcStub), function(err) {
                 if (err) {
+                    err.should.equal('Already joining');
                     done();
                 }
             });
