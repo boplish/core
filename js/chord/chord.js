@@ -118,8 +118,8 @@ var Helper = {
 
 Chord.prototype._closest_preceding_finger = function(id) {
     var i;
-    for (i = this._fingerTableEntries; i >= 1; i--) {
-        if (Range.inOpenInterval(this._fingerTable[i].node.id(), this.id, id)) {
+    for (i = this._m; i >= 1; i--) {
+        if (this._fingerTable[i] && Range.inOpenInterval(this._fingerTable[i].node.id(), this.id, id)) {
             return this._fingerTable[i].node;
         }
     }
