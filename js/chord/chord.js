@@ -112,7 +112,7 @@ var Helper = {
 
     randomFingerTableIndex: function(table) {
         var keys = Object.keys(table);
-        return keys[Helper.random(0, keys.length)];
+        return keys[Helper.random(0, keys.length - 1)];
     }
 };
 
@@ -129,7 +129,8 @@ Chord.prototype._closest_preceding_finger = function(id) {
 Chord.prototype._fix_fingers = function() {
     var self = this;
     var i = Helper.randomFingerTableIndex(self._fingerTable),
-        start = self._fingerTable[i].start();
+        start;
+    start = self._fingerTable[i].start();
 
     self.find_successor(start, function(err, msg) {
         if (err) {
@@ -498,7 +499,7 @@ Chord.prototype.route = function(to, message, callback) {
             var nextHop = self._closest_preceding_finger(to);
             if (nextHop === self._localNode) {
                 // finger table is intialy filled with localnode, make sure not to route to myself
-                var nextHop = self._localNode._successor;
+                nextHop = self._localNode._successor;
             }
             self.log("routing (" + [message.type, message.payload.type, message.seqnr].join(", ") + ") to " + nextHop.id().toString());
             nextHop.route(to, message, callback);
