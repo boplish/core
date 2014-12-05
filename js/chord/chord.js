@@ -8,6 +8,8 @@ var chordConfig = require('../config.js').chord;
 
 /** @fileOverview Chord DHT implementation */
 
+var _m = 80;
+
 /**
  * @constructor
  * @class This is a Chord DHT implementation using WebRTC data channels.
@@ -45,7 +47,6 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
     this._messageCallbacks = {};
     this._monitorCallback = function() {};
     this._fingerTable = {};
-    this._m = 160;
     this._maxFingerTableEntries = chordConfig.maxFingerTableEntries || 10;
     this._maxPeerConnections = chordConfig.maxPeerConnections || 15;
     this._joining = false;
@@ -56,7 +57,7 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
 
     var memoizer = Helper.memoize(Helper.fingerTableIntervalStart.bind(this));
     for (var i = 1; i <= this._maxFingerTableEntries; i++) {
-        var k = 1 + (i - 1) * Math.round(this._m / this._maxFingerTableEntries);
+        var k = 1 + (i - 1) * Math.round(_m / this._maxFingerTableEntries);
         this._fingerTable[k] = {
             k: k,
             start: memoizer.bind(null, k),
@@ -90,7 +91,7 @@ var Helper = {
     },
 
     fingerTableIntervalStart: function(k) {
-        return this.id.add(BigInteger(2).pow(k - 1)).mod(BigInteger(2).pow(this._m));
+        return this.id.add(BigInteger(2).pow(k - 1)).mod(BigInteger(2).pow(_m));
     },
 
     defineProperties: function(object) {
@@ -543,6 +544,7 @@ Chord.prototype.getPeerIds = function() {
 
 Chord.randomId = function() {
     var randomId = Sha1.bigIntHash(Math.random().toString());
+    randomId = randomId.mod(BigInteger(2).pow(_m));
     return randomId;
 };
 
