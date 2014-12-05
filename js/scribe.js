@@ -3,6 +3,8 @@
 var BigInteger = require('./third_party/BigInteger.js');
 var Sha1 = require('./third_party/sha1.js');
 
+var scribeConfig = require('./config.js').scribe;
+
 var Scribe = function(router) {
     if (!(this instanceof Scribe)) {
         return new Scribe(router);
@@ -20,7 +22,7 @@ var Scribe = function(router) {
     this._createdGroups = {}; // [groupHash]
     this._router.registerDeliveryCallback('bopscribe-protocol', this._onmessage.bind(this));
     this._router.registerInterceptor(this._onRouteIntercept.bind(this));
-    this._refreshInterval = 5000; // ms
+    this._refreshInterval = scribeConfig.refreshInterval || 5000; // ms
     setInterval(this.maintain.bind(this), this._refreshInterval);
 };
 

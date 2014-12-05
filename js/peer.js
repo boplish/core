@@ -20,7 +20,7 @@ var Peer = function(id, peerConnection, dataChannel) {
     this._peerConnection = peerConnection;
     this._dataChannel = dataChannel;
     this._dataChannel.onmessage = this._onmessage.bind(this);
-    this._heartbeatDefaultTimer = peerConfig.messageTimeout;
+    this._heartbeatDefaultTimer = peerConfig.messageTimeout || 1000;
     this._heartbeatCallbacks = {};
 };
 

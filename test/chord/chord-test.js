@@ -9,6 +9,8 @@ var Sha1 = require('../../js/third_party/sha1');
 var BigInteger = require('../../js/third_party/BigInteger');
 var Peer = require('../../js/peer');
 
+var config = require('../../js/config');
+
 function mock_dcs() {
     var dc_in = {
         send: function(msg) {
@@ -65,18 +67,22 @@ describe('Chord', function() {
             assert.ok(c.id.equals(new BigInteger(42)));
         });
         it('should throw on inacceptable max finger table parameter', function() {
+            config.chord.maxFingerTableEntries = -5;
             (function() {
-                c = new Chord(new BigInteger(0), dcStub, cm, -5);
+                c = new Chord(new BigInteger(0), dcStub, cm);
             }).should.
             throw ();
+            config.chord.maxFingerTableEntries = 0;
             (function() {
-                c = new Chord(new BigInteger(0), dcStub, cm, 0);
+                c = new Chord(new BigInteger(0), dcStub, cm);
             }).should.
             throw ();
+            config.chord.maxFingerTableEntries = 161;
             (function() {
-                c = new Chord(new BigInteger(0), dcStub, cm, 161);
+                c = new Chord(new BigInteger(0), dcStub, cm);
             }).should.
             throw ();
+            delete config.chord.maxFingerTableEntries;
         });
         it('should start with successor set to myself and predecessor set to null', function() {
             c._localNode._successor.should.equal(c._localNode);
@@ -89,15 +95,17 @@ describe('Chord', function() {
         });
         it('should initialize complete finger table', function() {
             var i;
-            c = new Chord(new BigInteger(42), dcStub, cm, 160);
+            config.chord.maxFingerTableEntries = 160;
+            c = new Chord(new BigInteger(42), dcStub, cm);
             assert.equal(Object.keys(c._fingerTable).length, 160);
             for (i = 1; i <= 160; i++) {
                 assert.equal(c._fingerTable[i].start().toString(), (BigInteger(42).plus(BigInteger(2).pow(BigInteger(i - 1))).toString()));
                 assert.equal(c._fingerTable[i].node, c._localNode);
             }
+            delete config.chord.maxFingerTableEntries;
         });
         it('should initialize partially filled finger table', function() {
-            c = new Chord(new BigInteger(42), dcStub, cm, 10);
+            c = new Chord(new BigInteger(42), dcStub, cm);
 
             assert.equal(Object.keys(c._fingerTable).length, 10);
             assert.equal(c._fingerTable[1].start().toString(), (BigInteger(42).plus(BigInteger(2).pow(BigInteger(0))).toString()));
@@ -121,12 +129,14 @@ describe('Chord', function() {
             assert.equal(c._fingerTable[145].start().toString(), (BigInteger(42).plus(BigInteger(2).pow(BigInteger(144))).toString()));
             assert.equal(c._fingerTable[145].node, c._localNode);
 
-            c = new Chord(new BigInteger(99), dcStub, cm, 1);
+            config.chord.maxFingerTableEntries = 1;
+            c = new Chord(new BigInteger(99), dcStub, cm);
 
             assert.equal(Object.keys(c._fingerTable).length, 1);
             assert.equal(c._fingerTable[1].start().toString(), (BigInteger(99).plus(BigInteger(2).pow(BigInteger(0))).toString()));
             assert.equal(c._fingerTable[1].node, c._localNode);
 
+            config.chord.maxFingerTableEntries = 2;
             c = new Chord(new BigInteger(99), dcStub, cm, 2);
 
             assert.equal(Object.keys(c._fingerTable).length, 2);
@@ -135,10 +145,12 @@ describe('Chord', function() {
             assert.equal(c._fingerTable[81].start().toString(), (BigInteger(99).plus(BigInteger(2).pow(BigInteger(80))).toString()));
             assert.equal(c._fingerTable[81].node, c._localNode);
 
-            c = new Chord(new BigInteger(99), dcStub, cm, 159);
+            config.chord.maxFingerTableEntries = 159;
+            c = new Chord(new BigInteger(99), dcStub, cm);
             // we fill only the requested number of entries, even if more would
             // fit in (Math.round(160/159) === 1)
             assert.equal(Object.keys(c._fingerTable).length, 159);
+            delete config.chord.maxFingerTableEntries;
         });
     });
     describe('#id', function() {

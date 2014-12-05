@@ -4,6 +4,7 @@ var Sha1 = require('../third_party/sha1.js');
 var BigInteger = require('../third_party/BigInteger.js');
 var async = require("async");
 var Range = require("./range.js");
+var chordConfig = require('../config.js').chord;
 
 /** @fileOverview Chord DHT implementation */
 
@@ -21,12 +22,12 @@ var Range = require("./range.js");
  * number of identifier bits (m; which is usually 160), the entries are evenly
  * distributed across the complete finger table. Default is 10.
  */
-var Chord = function(id, fallbackSignaling, connectionManager, maxFingerTableEntries) {
+var Chord = function(id, fallbackSignaling, connectionManager) {
     if (!(this instanceof Chord)) {
         return new Chord(id, fallbackSignaling, connectionManager);
     }
 
-    if (maxFingerTableEntries < 1 || maxFingerTableEntries > 160) {
+    if (typeof(chordConfig.maxFingerTableEntries) !== 'undefined' && (chordConfig.maxFingerTableEntries < 1 || chordConfig.maxFingerTableEntries > 160)) {
         throw new Error("Illegal maxFingerTableEntries value: " + maxFingerTableEntries + ". Must be between 1 and 160 (inclusively).");
     }
 
@@ -45,17 +46,17 @@ var Chord = function(id, fallbackSignaling, connectionManager, maxFingerTableEnt
     this._monitorCallback = function() {};
     this._fingerTable = {};
     this._m = 160;
-    this._fingerTableEntries = maxFingerTableEntries || 10;
-    this._maxPeerConnections = 15;
+    this._maxFingerTableEntries = chordConfig.maxFingerTableEntries || 10;
+    this._maxPeerConnections = chordConfig.maxPeerConnections || 15;
     this._joining = false;
-    this.debug = true;
+    this.debug = chordConfig.debug || false;
     this._successorList = [];
     this._routeInterceptor = [];
     this._helper = Helper;
 
     var memoizer = Helper.memoize(Helper.fingerTableIntervalStart.bind(this));
-    for (var i = 1; i <= this._fingerTableEntries; i++) {
-        var k = 1 + (i - 1) * Math.round(this._m / this._fingerTableEntries);
+    for (var i = 1; i <= this._maxFingerTableEntries; i++) {
+        var k = 1 + (i - 1) * Math.round(this._m / this._maxFingerTableEntries);
         this._fingerTable[k] = {
             k: k,
             start: memoizer.bind(null, k),
@@ -63,9 +64,9 @@ var Chord = function(id, fallbackSignaling, connectionManager, maxFingerTableEnt
         };
     }
 
-    this._stabilizeInterval = 1000;
+    this._stabilizeInterval = chordConfig.stabilizeInterval || 1000;
     this._stabilizeTimer = setTimeout(this.stabilize.bind(this), this._stabilizeInterval);
-    this._fixFingersInterval = 1000;
+    this._fixFingersInterval = chordConfig.fixFingersInterval || 1000;
     this._fixFingersTimer = setTimeout(this._fix_fingers.bind(this), this._fixFingersInterval);
 
     return this;

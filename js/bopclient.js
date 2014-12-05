@@ -8,6 +8,7 @@ var Router = require('./chord/chord.js');
 var BigInteger = require('./third_party/BigInteger.js');
 var BopURI = require('./bopuri.js');
 var Scribe = require('./scribe.js');
+var bopclientConfig = require('./config.js').bopclient;
 
 /**
  * @constructor
@@ -33,9 +34,9 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     var self = this;
 
     // when join fails, retry after 5s
-    self._joinDelay = 5000;
+    self._joinDelay = bopclientConfig.joinDelay || 5000;
     // number of retries
-    self._joinTrials = 3;
+    self._joinTrials = bopclientConfig.joinTrials || 3;
 
     var browser = bowser.browser;
     if (browser.firefox && browser.version >= 26) {
@@ -59,7 +60,7 @@ BOPlishClient = function(bootstrapHost, successCallback, errorCallback) {
     var id = Router.randomId();
     var channel = new WebSocket(bootstrapHost + 'ws/' + id.toString());
 
-    this.bopid = Math.random().toString(36).replace(/[^a-z]+/g, '') + '@id.com';
+    this.bopid = bopclientConfig.bopid || Math.random().toString(36).replace(/[^a-z]+/g, '') + '@id.com';
 
     channel.onerror = function(ev) {
         errorCallback('Failed to open connection to bootstrap server:' + bootstrapHost + ': ' + ev);

@@ -3,6 +3,8 @@
 var Peer = require('./peer.js');
 var BigInteger = require('./third_party/BigInteger.js');
 
+var connManConfig = require('./config.js').connectionManager;
+
 /**
  * @constructor
  * @class Handles the connection establishment to other nodes as
@@ -13,12 +15,12 @@ var ConnectionManager = function() {
         return new ConnectionManager();
     }
     this._pending = {};
-    this._pcoptions = {
+    this._pcoptions = connManConfig.pcoptions || {
         iceServers: [{
-            //"url": "stun:stun.l.google.com:19302"
             "url": "stun:localhost"
         }]
     };
+    this._dcoptions = connManConfig.dcoptions || {};
     return this;
 };
 
@@ -87,7 +89,7 @@ ConnectionManager.prototype = {
      */
     connect: function(to, callback) {
         var pc = new RTCPeerConnection(this._pcoptions);
-        var dc = pc.createDataChannel(null, {});
+        var dc = pc.createDataChannel(null, this._dcoptions);
         var seqnr = Math.floor(Math.random() * 1000000);
         this._pending[seqnr] = {
             seqnr: seqnr,
