@@ -1,3 +1,5 @@
+/* jshint expr: true */
+
 var assert = require('should');
 var sinon = require('sinon');
 var Chord = require('../../js/chord/chord');
@@ -60,21 +62,83 @@ describe('Chord', function() {
             c.should.have.property('_localNode');
             c._localNode.should.be.an.instanceof(ChordNode);
 
-            assert(c.id.equals(new BigInteger(5))); // how does this work??
+            assert.ok(c.id.equals(new BigInteger(42)));
+        });
+        it('should throw on inacceptable max finger table parameter', function() {
+            (function() {
+                c = new Chord(new BigInteger(0), dcStub, cm, -5);
+            }).should.
+            throw ();
+            (function() {
+                c = new Chord(new BigInteger(0), dcStub, cm, 0);
+            }).should.
+            throw ();
+            (function() {
+                c = new Chord(new BigInteger(0), dcStub, cm, 161);
+            }).should.
+            throw ();
         });
         it('should start with successor set to myself and predecessor set to null', function() {
             c._localNode._successor.should.equal(c._localNode);
             assert.equal(c._localNode._predecessor, null);
             assert.equal(c._localNode._peer._dataChannel, dcStub);
         });
-        it('should initialize finger table', function() {
-            var hash = mockHash(),
-                i;
+        it('should initialize finger table with 10 entries per default', function() {
+            c = new Chord(new BigInteger(42), dcStub, cm); // no maxFingerTableEntries parameter, so asusme default
+            assert.equal(Object.keys(c._fingerTable).length, 10);
+        });
+        it('should initialize complete finger table', function() {
+            var i;
+            c = new Chord(new BigInteger(42), dcStub, cm, 160);
             assert.equal(Object.keys(c._fingerTable).length, 160);
             for (i = 1; i <= 160; i++) {
-                assert.equal(c._fingerTable[i].start().toString(), (BigInteger(42).plus(BigInteger(2).pow(BigInteger(i - 1)).toString())));
+                assert.equal(c._fingerTable[i].start().toString(), (BigInteger(42).plus(BigInteger(2).pow(BigInteger(i - 1))).toString()));
                 assert.equal(c._fingerTable[i].node, c._localNode);
             }
+        });
+        it('should initialize partially filled finger table', function() {
+            c = new Chord(new BigInteger(42), dcStub, cm, 10);
+
+            assert.equal(Object.keys(c._fingerTable).length, 10);
+            assert.equal(c._fingerTable[1].start().toString(), (BigInteger(42).plus(BigInteger(2).pow(BigInteger(0))).toString()));
+            assert.equal(c._fingerTable[1].node, c._localNode);
+            assert.equal(c._fingerTable[17].start().toString(), (BigInteger(42).plus(BigInteger(2).pow(BigInteger(16))).toString()));
+            assert.equal(c._fingerTable[17].node, c._localNode);
+            assert.equal(c._fingerTable[33].start().toString(), (BigInteger(42).plus(BigInteger(2).pow(BigInteger(32))).toString()));
+            assert.equal(c._fingerTable[33].node, c._localNode);
+            assert.equal(c._fingerTable[49].start().toString(), (BigInteger(42).plus(BigInteger(2).pow(BigInteger(48))).toString()));
+            assert.equal(c._fingerTable[49].node, c._localNode);
+            assert.equal(c._fingerTable[65].start().toString(), (BigInteger(42).plus(BigInteger(2).pow(BigInteger(64))).toString()));
+            assert.equal(c._fingerTable[65].node, c._localNode);
+            assert.equal(c._fingerTable[81].start().toString(), (BigInteger(42).plus(BigInteger(2).pow(BigInteger(80))).toString()));
+            assert.equal(c._fingerTable[81].node, c._localNode);
+            assert.equal(c._fingerTable[97].start().toString(), (BigInteger(42).plus(BigInteger(2).pow(BigInteger(96))).toString()));
+            assert.equal(c._fingerTable[97].node, c._localNode);
+            assert.equal(c._fingerTable[113].start().toString(), (BigInteger(42).plus(BigInteger(2).pow(BigInteger(112))).toString()));
+            assert.equal(c._fingerTable[113].node, c._localNode);
+            assert.equal(c._fingerTable[129].start().toString(), (BigInteger(42).plus(BigInteger(2).pow(BigInteger(128))).toString()));
+            assert.equal(c._fingerTable[129].node, c._localNode);
+            assert.equal(c._fingerTable[145].start().toString(), (BigInteger(42).plus(BigInteger(2).pow(BigInteger(144))).toString()));
+            assert.equal(c._fingerTable[145].node, c._localNode);
+
+            c = new Chord(new BigInteger(99), dcStub, cm, 1);
+
+            assert.equal(Object.keys(c._fingerTable).length, 1);
+            assert.equal(c._fingerTable[1].start().toString(), (BigInteger(99).plus(BigInteger(2).pow(BigInteger(0))).toString()));
+            assert.equal(c._fingerTable[1].node, c._localNode);
+
+            c = new Chord(new BigInteger(99), dcStub, cm, 2);
+
+            assert.equal(Object.keys(c._fingerTable).length, 2);
+            assert.equal(c._fingerTable[1].start().toString(), (BigInteger(99).plus(BigInteger(2).pow(BigInteger(0))).toString()));
+            assert.equal(c._fingerTable[1].node, c._localNode);
+            assert.equal(c._fingerTable[81].start().toString(), (BigInteger(99).plus(BigInteger(2).pow(BigInteger(80))).toString()));
+            assert.equal(c._fingerTable[81].node, c._localNode);
+
+            c = new Chord(new BigInteger(99), dcStub, cm, 159);
+            // we fill only the requested number of entries, even if more would
+            // fit in (Math.round(160/159) === 1)
+            assert.equal(Object.keys(c._fingerTable).length, 159);
         });
     });
     describe('#id', function() {

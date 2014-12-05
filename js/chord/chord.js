@@ -16,10 +16,18 @@ var Range = require("./range.js");
  * server
  * @param connectionManager {ConnectionManager} The connection manager instance
  * to be used for requesting data channel connections.
+ * @param maxFingerTableEntries {Number} The maximum number of entries that this
+ * chord peer shall keep in the finger table. If this number is less than the
+ * number of identifier bits (m; which is usually 160), the entries are evenly
+ * distributed across the complete finger table. Default is 10.
  */
-var Chord = function(id, fallbackSignaling, connectionManager) {
+var Chord = function(id, fallbackSignaling, connectionManager, maxFingerTableEntries) {
     if (!(this instanceof Chord)) {
         return new Chord(id, fallbackSignaling, connectionManager);
+    }
+
+    if (maxFingerTableEntries < 1 || maxFingerTableEntries > 160) {
+        throw new Error("Illegal maxFingerTableEntries value: " + maxFingerTableEntries + ". Must be between 1 and 160 (inclusively).");
     }
 
     Helper.defineProperties(this);
@@ -37,7 +45,7 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
     this._monitorCallback = function() {};
     this._fingerTable = {};
     this._m = 160;
-    this._fingerTableEntries = 16;
+    this._fingerTableEntries = maxFingerTableEntries || 10;
     this._maxPeerConnections = 15;
     this._joining = false;
     this.debug = true;
@@ -46,9 +54,9 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
     this._helper = Helper;
 
     var memoizer = Helper.memoize(Helper.fingerTableIntervalStart.bind(this));
-    for (var i = 0; i < this._fingerTableEntries; i++) {
-        var k = Math.round((i * this._m) / (this._fingerTableEntries - 1)) || 1;
-        this._fingerTable[i] = {
+    for (var i = 1; i <= this._fingerTableEntries; i++) {
+        var k = 1 + (i - 1) * Math.round(this._m / this._fingerTableEntries);
+        this._fingerTable[k] = {
             k: k,
             start: memoizer.bind(null, k),
             node: this._localNode._successor
@@ -96,12 +104,16 @@ var Helper = {
             },
             set: function(id) {}
         });
+    },
+
+    random: function(min, max) {
+        return Math.floor(Math.random() * (max - min + 1) + min);
     }
 };
 
 Chord.prototype._closest_preceding_finger = function(id) {
     var i;
-    for (i = this._fingerTableEntries - 1; i >= 0; i--) {
+    for (i = this._fingerTableEntries; i >= 1; i--) {
         if (Range.inOpenInterval(this._fingerTable[i].node.id(), this.id, id)) {
             return this._fingerTable[i].node;
         }
@@ -111,7 +123,7 @@ Chord.prototype._closest_preceding_finger = function(id) {
 
 Chord.prototype._fix_fingers = function() {
     var self = this;
-    var i = Math.floor(Math.random() * self._fingerTableEntries);
+    var i = Helper.random(1, self._fingerTableEntries);
     var key = self._fingerTable[i].start();
 
     self.find_successor(key, function(err, msg) {
