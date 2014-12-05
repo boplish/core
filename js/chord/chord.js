@@ -72,7 +72,7 @@ var Chord = function(id, fallbackSignaling, connectionManager) {
  */
 
 function m() {
-    return chordConfig.maxFingerTableEntries || 10;
+    return chordConfig.maxFingerTableEntries || 16;
 }
 
 /**
