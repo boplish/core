@@ -31,13 +31,13 @@ describe('ConnectionManager', function() {
         it('should register the correct callbacks', function() {
             var mockRouter = sinon.mock(RouterAPI);
             mockRouter.expects("registerDeliveryCallback").withArgs('signaling-protocol');
-            cm.bootstrap(RouterAPI, function(){}, function(){});
+            cm.bootstrap(RouterAPI, function() {}, function() {});
             mockRouter.restore();
         });
         it('should route the initial offer', function() {
             var mockRouter = sinon.mock(RouterAPI);
             mockRouter.expects('route').once();
-            cm.bootstrap(RouterAPI, function(){}, function(){});
+            cm.bootstrap(RouterAPI, function() {}, function() {});
             mockRouter.restore();
         });
         it('should create the correct offer packet', function(done) {
@@ -55,9 +55,9 @@ describe('ConnectionManager', function() {
                     done();
                 }
             };
-            cm.bootstrap(router, function(){}, function(){});
+            cm.bootstrap(router, function() {}, function() {});
         });
-        it('should allow being called twice', function(done) {
+        it('should call error callback', function(done) {
             var router = {
                 id: function() {
                     return 1;
@@ -78,13 +78,8 @@ describe('ConnectionManager', function() {
                 }
             };
             var called = 0;
-            cm.bootstrap(router, function() {}, function(){
-                called += 1;
-            });
-            cm.bootstrap(router, function() {}, function(){
-                if (called == 1) {
-                    done();
-                }
+            cm.bootstrap(router, function() {}, function() {
+                done();
             });
         });
     });
