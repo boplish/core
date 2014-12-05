@@ -103,6 +103,8 @@ Scribe.prototype = {
         if (!to || !msg || !cb) {
             throw Error('Malformed send request');
         }
+        // fit group id into key space
+        to = to.mod(BigInteger(2).pow(self._router._m));
         self._router.route(to, {
             from: self._router.id,
             type: 'bopscribe-protocol',
@@ -123,7 +125,7 @@ Scribe.prototype = {
     create: function(groupId, cb) {
         var self = this;
         var hash = Sha1.bigIntHash(groupId);
-        self._router.put(hash, {
+        self._router.put(groupId, {
             groupId: groupId,
             creator: self._router.id.toString(),
             createdOn: Date.now()
