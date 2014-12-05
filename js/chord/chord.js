@@ -428,6 +428,11 @@ Chord.prototype.stabilize = function() {
     }
 };
 
+Chord.prototype._validateKey = function(key) {
+    if (key.lesser(0) || key.greater(BigInteger(2).pow(this._m).minus(1))) {
+        throw new Error("Key " + key.toString() + " not in acceptable range");
+    }
+};
 
 /**
  * Store 'value' under 'key' in the DHT
@@ -436,7 +441,7 @@ Chord.prototype.stabilize = function() {
  * @param value
  */
 Chord.prototype.put = function(key, value, callback) {
-    key = key.mod(BigInteger(2).pow(_m));
+    this._validateKey(key);
     if (this._localNode.responsible(key)) {
         this._localNode.store(key, value);
         callback(null);
@@ -446,7 +451,7 @@ Chord.prototype.put = function(key, value, callback) {
 };
 
 Chord.prototype.get = function(key, callback) {
-    key = key.mod(BigInteger(2).pow(_m));
+    validateKey(key);
     var val;
     if (this._localNode.responsible(key)) {
         val = this._localNode.get_from_store(key);
@@ -457,7 +462,7 @@ Chord.prototype.get = function(key, callback) {
 };
 
 Chord.prototype.remove = function(key) {
-    key = key.mod(BigInteger(2).pow(_m));
+    validateKey(key);
     // TODO: implement
 };
 
