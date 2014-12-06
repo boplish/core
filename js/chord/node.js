@@ -184,12 +184,12 @@ ChordNode.prototype = {
                 };
                 self._send(msg);
             } else {
-                var msg = {
+                var errorMsg = {
                     type: self.message_types.ERROR,
                     error: err,
                     seqnr: seqnr
                 };
-                self._send(msg);
+                self._send(errorMsg);
             }
         });
     },
