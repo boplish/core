@@ -120,12 +120,12 @@ BOPlishClient.prototype = {
         var self = this;
         var protocol = {
             bopid: this.bopid,
-            send: function(bopuri, msg) {
+            send: function(bopuri, msg, cb) {
                 if (!msg) {
                     throw new Error('Trying to send empty message');
                 }
 
-                self._send(bopuri, protocolIdentifier, msg);
+                self._send(bopuri, protocolIdentifier, msg, cb);
             },
             group: {
                 create: function(groupId, cb) {
@@ -179,7 +179,7 @@ BOPlishClient.prototype = {
      * todo
      *
      */
-    _send: function(bopid, protocolIdentifier, msg) {
+    _send: function(bopid, protocolIdentifier, msg, cb) {
         msg = {
             payload: msg,
             to: bopid,
@@ -190,8 +190,18 @@ BOPlishClient.prototype = {
         this._router.get(bopid, function(err, auth) {
             if (err) {
                 console.log(err);
+                if (typeof cb === 'function') {
+                    cb(err);
+                }
             } else if (auth && auth.chordId) {
-                this._router.route(new BigInteger(auth.chordId), msg, function(err) {});
+                this._router.route(new BigInteger(auth.chordId), msg, function(err) {
+                    if (err) {
+                        console.log(err);
+                        if (typeof cb === 'function') {
+                            cb(err);
+                        }
+                    }
+                });
             } else {
                 throw new Error('Malformed response from GET request for ' + bopid + '. Returned ' + JSON.stringify(auth));
             }
