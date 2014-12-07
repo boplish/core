@@ -114,7 +114,7 @@ Scribe.prototype = {
     remove: function(groupId, cb) {
         // @todo: remove key from dht
         var self = this;
-        var hash = Sha1.bigIntHash(groupId);
+        var hash = Sha1.bigIntHash(groupId).mod(BigInteger(2).pow(self._router._m));
         if (this._createdGroups[hash]) {
             delete this._createdGroups[hash];
             return cb(null, groupId);
@@ -124,8 +124,8 @@ Scribe.prototype = {
     },
     create: function(groupId, cb) {
         var self = this;
-        var hash = Sha1.bigIntHash(groupId);
-        self._router.put(groupId, {
+        var hash = Sha1.bigIntHash(groupId).mod(BigInteger(2).pow(self._router._m));
+        self._router.put(hash, {
             groupId: groupId,
             creator: self._router.id.toString(),
             createdOn: Date.now()
@@ -192,7 +192,7 @@ Scribe.prototype = {
             return cb('Discarding message as no groupId has been specified');
         }
         var peerId = self._router.id;
-        var groupHash = Sha1.bigIntHash(groupId);
+        var groupHash = Sha1.bigIntHash(groupId).mod(BigInteger(2).pow(self._router._m));
 
         self._send(groupHash, {
             type: self._messageTypes.SUBSCRIBE,
@@ -292,11 +292,15 @@ Scribe.prototype = {
             var peerId = self._subscriptions[groupHashStr][index].peerId;
             if (peerId.equals(self._router.id)) {
                 // its for me, deliver to application
-                self.onmessage(self._mySubscriptions[msg.groupHash], payload);
+                try {
+                    self.onmessage(self._mySubscriptions[groupHashStr], payload);
+                } catch (e) {
+                    console.log('BOPscribe: Could not deliver message to subscriber ', msg, e);
+                }
             } else {
                 self._send(peerId, msg, function(err) {
                     if (err) {
-                        console.log('error sending message to a subscriber', err);
+                        console.log('BOPscribe: Error sending message to a subscriber', msg, err);
                     }
                 });
             }

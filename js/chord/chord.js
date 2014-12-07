@@ -444,8 +444,9 @@ Chord.prototype._validateKey = function(key) {
 Chord.prototype.put = function(key, value, callback) {
     if (typeof key === 'string') {
         key = Sha1.bigIntHash(key).mod(BigInteger(2).pow(this._m));
+    } else {
+        this._validateKey(key);
     }
-    this._validateKey(key);
     if (this._localNode.responsible(key)) {
         this._localNode.store(key, value);
         callback(null);
