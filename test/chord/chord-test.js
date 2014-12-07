@@ -89,9 +89,9 @@ describe('Chord', function() {
             assert.equal(c._localNode._predecessor, null);
             assert.equal(c._localNode._peer._dataChannel, dcStub);
         });
-        it('should initialize finger table with 10 entries per default', function() {
+        it('should initialize finger table with 16 entries per default', function() {
             c = new Chord(new BigInteger(42), dcStub, cm); // no maxFingerTableEntries parameter, so asusme default
-            assert.equal(Object.keys(c._fingerTable).length, 10);
+            assert.equal(Object.keys(c._fingerTable).length, 16);
         });
         it('should initialize complete finger table', function() {
             var i;
@@ -105,9 +105,10 @@ describe('Chord', function() {
             delete config.chord.maxFingerTableEntries;
         });
         it('should initialize partially filled finger table', function() {
+            config.chord.maxFingerTableEntries = 16;
             c = new Chord(new BigInteger(42), dcStub, cm);
 
-            assert.equal(Object.keys(c._fingerTable).length, 10);
+            assert.equal(Object.keys(c._fingerTable).length, config.chord.maxFingerTableEntries);
             assert.equal(c._fingerTable[1].start().toString(), (BigInteger(42).plus(BigInteger(2).pow(BigInteger(0))).toString()));
             assert.equal(c._fingerTable[1].node, c._localNode);
             assert.equal(c._fingerTable[2].start().toString(), (BigInteger(42).plus(BigInteger(2).pow(BigInteger(1))).toString()));
