@@ -1,5 +1,6 @@
 var BigInteger = require("../third_party/BigInteger.js");
 var Range = require("./range.js");
+var RingBuffer = require("../ringbuffer.js");
 
 var ChordNode = function(peer, chord, localNode) {
     if (!(this instanceof ChordNode)) {
@@ -21,7 +22,7 @@ var ChordNode = function(peer, chord, localNode) {
     this._localNode = !!localNode;
     this._store = {};
     this._rtt = {
-        last: -1,
+        history: new RingBuffer(10),
         max: -1
     };
     this._messageTimeout = this._peer._heartbeatDefaultTimer;
@@ -281,6 +282,7 @@ ChordNode.prototype = {
                 msg.error = 'Timed out';
                 this._handle_response(msg, this._pending[msg.seqnr]);
             }
+            //}.bind(this), this._rtt.max > 0 ? this._rtt.max : this._messageTimeout); TODO: enable
         }.bind(this), this._messageTimeout);
         this._send(msg);
     },
@@ -312,13 +314,11 @@ ChordNode.prototype = {
     _handle_response: function(msg, pending) {
         var rxTime = new Date();
         var rtt = rxTime - pending.txTime;
-        if (rtt > 10) {
-            this.log("RTT for peer " + msg.from + ": " + rtt, msg);
-        }
+        this.log("RTT for peer " + msg.from + ": " + rtt, msg);
         if (rtt > this._rtt.max) {
             this._rtt.max = rtt;
         }
-        this._rtt.last = rtt;
+        this._rtt.history.push(rtt);
         delete this._pending[msg.seqnr];
         pending.callback(msg.error, msg);
     },
