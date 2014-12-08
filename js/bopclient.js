@@ -189,21 +189,21 @@ BOPlishClient.prototype = {
 
         this._router.get(bopid, function(err, auth) {
             if (err) {
-                console.log(err);
+                console.log("Error resolving " + bopid, err);
                 if (typeof cb === 'function') {
                     cb(err);
                 }
             } else if (auth && auth.chordId) {
                 this._router.route(new BigInteger(auth.chordId), msg, function(err) {
                     if (err) {
-                        console.log(err);
-                        if (typeof cb === 'function') {
-                            cb(err);
-                        }
+                        console.log("Error routing message to " + auth.chordId, err);
+                    }
+                    if (typeof cb === 'function') {
+                        cb(err);
                     }
                 });
-            } else {
-                throw new Error('Malformed response from GET request for ' + bopid + '. Returned ' + JSON.stringify(auth));
+            } else if (typeof cb === 'function') {
+                cb(new Error('Malformed response from GET request for ' + bopid + '. Returned ' + JSON.stringify(auth)));
             }
         }.bind(this));
     },
