@@ -20,6 +20,10 @@ var ChordNode = function(peer, chord, localNode) {
     this.debug = false;
     this._localNode = !!localNode;
     this._store = {};
+    this._rtt = {
+        last: -1,
+        max: -1
+    };
     this._messageTimeout = this._peer._heartbeatDefaultTimer;
 
     return this;
@@ -308,7 +312,13 @@ ChordNode.prototype = {
     _handle_response: function(msg, pending) {
         var rxTime = new Date();
         var rtt = rxTime - pending.txTime;
-        this.log("RTT for peer " + msg.from + ": " + rtt, msg);
+        if (rtt > 10) {
+            this.log("RTT for peer " + msg.from + ": " + rtt, msg);
+        }
+        if (rtt > this._rtt.max) {
+            this._rtt.max = rtt;
+        }
+        this._rtt.last = rtt;
         delete this._pending[msg.seqnr];
         pending.callback(msg.error, msg);
     },
