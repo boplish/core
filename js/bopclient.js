@@ -144,16 +144,16 @@ BOPlishClient.prototype = {
                     var uri = BopURI.create(groupId, protocolIdentifier, '', '');
                     self._scribe.publish(uri.toString(), msg, cb);
                 },
-                getGroups: function() {
-                    var groups = self._scribe.getGroups();
-                    var myGroups = [];
+                getSubscriptions: function() {
+                    var groups = self._scribe.getMySubscriptions();
+                    var mySubscriptions = [];
                     groups.forEach(function(item) {
                         var uri = new BopURI(item);
                         if (uri.protocol === protocolIdentifier) {
-                            myGroups.push(uri.uid);
+                            mySubscriptions.push(uri.uid);
                         }
                     });
-                    return myGroups;
+                    return mySubscriptions;
                 }
             }
         };

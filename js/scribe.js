@@ -15,7 +15,7 @@ var Scribe = function(router) {
         LEAVE: 'LEAVE',
         SUBSCRIBE: 'SUBSCRIBE',
         PUBLISH: 'PUBLISH',
-        MESSAGE: 'MESSAGE'
+        DATA: 'DATA'
     };
     this._subscriptions = {}; // [groupHash][member]
     this._mySubscriptions = {}; // [groupHash]
@@ -54,7 +54,15 @@ Scribe.prototype = {
             });
         }
     },
-    getGroups: function() {
+    _getSubscriptions: function() {
+        var self = this;
+        var arr = [];
+        for (var group in self._subscriptions) {
+            arr.push(self._mySubscriptions[group]);
+        }
+        return arr;
+    },
+    getMySubscriptions: function() {
         var self = this;
         var arr = [];
         for (var group in self._subscriptions) {
@@ -93,7 +101,7 @@ Scribe.prototype = {
         var self = this;
         if (!msg || (msg.type !== 'bopscribe-protocol')) {
             return console.log('Scribe: Discarding message because the type is unknown', msg);
-        } else if (msg.payload.type !== self._messageTypes.MESSAGE) {
+        } else if (msg.payload.type !== self._messageTypes.DATA) {
             return console.log('Scribe: This message should not have gotten here', msg);
         }
         self._handleMessage(msg.payload);
@@ -140,7 +148,7 @@ Scribe.prototype = {
     },
     leave: function(groupId, cb) {
         var self = this;
-        var hash = Sha1.bigIntHash(groupId);
+        var hash = Sha1.bigIntHash(groupId).mod(BigInteger(2).pow(self._router._m));
         var hashStr = hash.toString();
 
         // i want to leave the group
@@ -241,14 +249,14 @@ Scribe.prototype = {
         var groupHash = new BigInteger(to);
         // @todo: is the publisher authorized?
 
-        // drop message, we respond with a `_messageTypes.MESSAGE`
+        // drop message, we respond with a `_messageTypes.DATA`
         next(null, msg, true);
 
         if (self._subscriptions[groupHash] && Object.keys(self._subscriptions[groupHash]).length <= 0) {
             return console.log('no subscribers for', groupHash.toString());
         }
         self._send(self._router.id, {
-            type: self._messageTypes.MESSAGE,
+            type: self._messageTypes.DATA,
             groupHash: groupHash.toString(),
             payload: protoPayload.payload
         }, function(err, msg) {
