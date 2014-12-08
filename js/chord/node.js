@@ -268,11 +268,14 @@ ChordNode.prototype = {
 
     _send_request: function(msg, cb) {
         msg.seqnr = Math.floor(Math.random() * 4294967296);
-        this._pending[msg.seqnr] = cb;
+        this._pending[msg.seqnr] = {
+            txTime: new Date(),
+            callback: cb
+        };
         setTimeout(function() {
             if (this._pending[msg.seqnr]) {
                 msg.error = 'Timed out';
-                this._handle_response(msg, cb);
+                this._handle_response(msg, this._pending[msg.seqnr]);
             }
         }.bind(this), this._messageTimeout);
         this._send(msg);
@@ -293,18 +296,21 @@ ChordNode.prototype = {
     },
 
     _onmessage: function(msg) {
-        var cb = this._pending[msg.seqnr];
+        var pending = this._pending[msg.seqnr];
         // if we find a callback this message is a response to a request of ours
-        if (typeof(cb) === 'function') {
-            this._handle_response(msg, cb);
+        if (pending && typeof(pending.callback) === 'function') {
+            this._handle_response(msg, pending);
         } else {
             this._handle_request(msg);
         }
     },
 
-    _handle_response: function(msg, callback) {
+    _handle_response: function(msg, pending) {
+        var rxTime = new Date();
+        var rtt = rxTime - pending.txTime;
+        this.log("RTT for peer " + msg.from + ": " + rtt, msg);
         delete this._pending[msg.seqnr];
-        callback(msg.error, msg);
+        pending.callback(msg.error, msg);
     },
 
     _handle_request: function(msg) {
