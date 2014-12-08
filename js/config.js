@@ -9,6 +9,7 @@ var config = {
         // dcoptions: {}
     },
     chord: {
+        debug: false,
         // debug: false,
         // maxPeerConnections: 15,
         // maxFingerTableEntries: 16,

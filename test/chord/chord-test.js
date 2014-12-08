@@ -13,13 +13,12 @@ var config = require('../../js/config');
 
 function mock_dcs() {
     var dc_in = {
-        send: function(msg) {
-            console.log(dc_out);
-            dc_out.onmessage({
-                data: msg
-            });
-        }
-    },
+            send: function(msg) {
+                dc_out.onmessage({
+                    data: msg
+                });
+            }
+        },
         dc_out = {
             send: function(msg) {
                 dc_in.onmessage({
@@ -57,6 +56,22 @@ describe('Chord', function() {
         c = new Chord(new BigInteger(42), dcStub, cm);
     });
 
+    function setUpSimpleDHT() {
+        var c1 = new Chord(BigInteger(0), dcStub, cm),
+            c2 = new Chord(BigInteger(1), dcStub, cm),
+            dcs = mock_dcs(),
+            c1n2 = new ChordNode(new Peer(c2.id, {}, dcs[0]), c1, false),
+            c2n1 = new ChordNode(new Peer(c1.id, {}, dcs[1]), c2, false);
+        c1._localNode._successor = c1._localNode._predecessor = c1n2;
+        c2._localNode._successor = c2._localNode._predecessor = c2n1;
+        c1._fingerTable[16].node = c1n2;
+
+        return {
+            c1: c1,
+            c2: c2
+        };
+    }
+
     describe('constructor', function() {
         it('should return an instance', function() {
             c.should.be.an.instanceof(Chord);
@@ -71,17 +86,17 @@ describe('Chord', function() {
             (function() {
                 c = new Chord(new BigInteger(0), dcStub, cm);
             }).should.
-            throw ();
+            throw();
             config.chord.maxFingerTableEntries = 0;
             (function() {
                 c = new Chord(new BigInteger(0), dcStub, cm);
             }).should.
-            throw ();
+            throw();
             config.chord.maxFingerTableEntries = 161;
             (function() {
                 c = new Chord(new BigInteger(0), dcStub, cm);
             }).should.
-            throw ();
+            throw();
             delete config.chord.maxFingerTableEntries;
         });
         it('should start with successor set to myself and predecessor set to null', function() {
@@ -201,6 +216,126 @@ describe('Chord', function() {
             c._localNode.responsible(c._localNode.id().plus(1)).should.not.be.ok;
             c._localNode.responsible(c._localNode.id().plus(2)).should.not.be.ok;
             c._localNode.responsible(c._localNode.id().plus(3)).should.be.ok;
+        });
+    });
+    describe('#route', function() {
+        it('should not invoke callback when unreliable', function() {
+            c.route(BigInteger(0), {
+                type: 'test',
+                property: 12345
+            }, function() {
+                sinon.assert.fail("Callback invoked on unreliable delivery");
+            }, {
+                reliable: false
+            });
+        });
+        it('should invoke callback when reliable', function(done) {
+            c.registerDeliveryCallback('test', function(msg) {});
+            c.route(BigInteger(0), {
+                type: 'test',
+                property: 12345
+            }, function(err) {
+                if (!err) {
+                    done();
+                }
+            }, {
+                reliable: true
+            });
+        });
+        it('should invoke callback with error when protocol handler is missing', function(done) {
+            c.route(BigInteger(0), {
+                type: 'test',
+                property: 12345
+            }, function(err) {
+                if (err) {
+                    done();
+                }
+            }, {
+                reliable: true
+            });
+        });
+        it('should invoke protocol handler', function() {
+            var handlerCalled = false;
+            c.registerDeliveryCallback('test', function(msg) {
+                handlerCalled = true;
+            });
+            c.route(BigInteger(0), {
+                type: 'test',
+                property: 12345
+            }, function(err) {
+                if (err) {
+                    sinon.assert.fail(err);
+                }
+            });
+            if (!handlerCalled) {
+                sinon.assert.fail("Handler has not been called");
+            }
+        });
+        it('should ACK reliable messages', function() {
+            var dht = setUpSimpleDHT(),
+                fail = false,
+                msgSent = {
+                    type: "test",
+                    payload: {
+                        test: Math.random()
+                    }
+                };
+            dht.c2.registerDeliveryCallback('test', function(msg) {});
+
+            dht.c1.route(BigInteger(1), msgSent, function(err) {
+                if (err) {
+                    fail = err;
+                }
+            }, {
+                reliable: true
+            });
+            if (fail) {
+                sinon.assert.fail("Error when routing: " + fail);
+            }
+        });
+        it('should send ERROR message with missing protocol handler', function(done) {
+            var dht = setUpSimpleDHT();
+            var msgSent = {
+                type: "test",
+                payload: {
+                    test: Math.random()
+                }
+            };
+            dht.c1.route(BigInteger(1), msgSent, function(err) {
+                if (err) {
+                    done();
+                } else {
+                    sinon.assert.fail("No error set");
+                }
+            }, {
+                reliable: true
+            });
+        });
+        it('should not reply to unreliable messages', function() {
+            var dht = setUpSimpleDHT();
+            var fail = false;
+            var msgSent = {
+                type: "test",
+                payload: {
+                    test: Math.random()
+                }
+            };
+
+            dht.c1.route(BigInteger(1), msgSent, function(err) {
+                fail = true;
+            }, {
+                reliable: false
+            });
+
+            dht.c2.registerDeliveryCallback('test', function(msg) {});
+            dht.c1.route(BigInteger(1), msgSent, function(err) {
+                fail = true;
+            }, {
+                reliable: false
+            });
+            if (fail) {
+                sinon.assert.fail("Callback invoked for unreliable transfer");
+            }
         });
     });
     describe('#localFindOperations', function() {

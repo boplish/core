@@ -123,7 +123,7 @@ var Helper = {
 Chord.prototype._closest_preceding_finger = function(id) {
     var i;
     for (i = this._m; i >= 1; i--) {
-        if (this._fingerTable[i] && this._fingerTable[i] !== this._localNode && Range.inOpenInterval(this._fingerTable[i].node.id(), this.id, id)) {
+        if (this._fingerTable[i] && this._fingerTable[i].node !== this._localNode && Range.inOpenInterval(this._fingerTable[i].node.id(), this.id, id)) {
             return this._fingerTable[i].node;
         }
     }
@@ -483,49 +483,63 @@ Chord.prototype.remove = function(key) {
     // TODO: implement
 };
 
-Chord.prototype.route = function(to, message, callback) {
+Chord.prototype.route = function(to, message, callback, options) {
     var self = this;
-    var rawMsg = {
+    var chordMsg = {
         to: to,
         payload: message
     };
+    // default reliability service is reliable
+    if (!options || options.reliable === undefined) {
+        options = {
+            reliable: true
+        };
+    }
 
     // make sure we run all interceptors before continuing
     var i = 0;
     (function callRouteInterceptor() {
         if (typeof(self._routeInterceptor[i]) === 'function') {
-            self._routeInterceptor[i](rawMsg, function(err, _rawMsg, drop) {
+            self._routeInterceptor[i](chordMsg, function(err, _chordMsg, drop) {
                 if (err) {
-                    callback('Error from RouteInterceptor: ' + err);
+                    if (options.reliable) {
+                        callback('Error from RouteInterceptor: ' + err);
+                    }
                     return;
                 } else if (!!drop) {
-                    self.log('RouteInterceptor dropped message', JSON.stringify(_rawMsg));
-                    callback(null);
+                    self.log('RouteInterceptor dropped message', JSON.stringify(_chordMsg));
+                    if (options.reliable) {
+                        callback(null);
+                    }
                     return;
                 }
-                rawMsg = _rawMsg;
+                chordMsg = _chordMsg;
                 i++;
                 callRouteInterceptor();
             });
         } else {
-            route(rawMsg.to, rawMsg.payload, callback);
+            route(chordMsg.to, chordMsg.payload, callback, options);
         }
     })();
 
-    function route(to, message, callback) {
+    function route(to, message, callback, options) {
         self._monitorCallback(message);
         if (to === "*" || (message.type === 'signaling-protocol' && !to.equals(self.id))) {
             // outgoing signaling messages go to bootstrap server
             self.log("routing (" + [message.type, message.seqnr].join(", ") + ") to signaling server");
-            self._localNode.route(to, message, callback);
+            self._localNode.route(to, message, options, callback);
         } else if (self._localNode.responsible(to)) {
             try {
                 self.log("(" + [message.type, message.seqnr].join(", ") + ") is for me");
                 self._messageCallbacks[message.type](message);
-                callback(null);
+                if (options.reliable) {
+                    callback(null);
+                }
             } catch (e) {
                 self.log("Error handling message: ", e);
-                callback("Error handling message: " + e);
+                if (options.reliable) {
+                    callback("Error handling message: " + e);
+                }
             }
         } else {
             // route using finger table
@@ -534,13 +548,16 @@ Chord.prototype.route = function(to, message, callback) {
                 // finger table is intialy filled with localnode, make sure not to route to myself
                 if (nextHop.id().equals(self._localNode.successor_id())) {
                     // we do not know our successor, drop message and error out
-                    return callback('Could not route message');
+                    if (options.reliable) {
+                        callback('Could not route message');
+                    }
+                    return;
                 } else {
                     nextHop = self._localNode._successor;
                 }
             }
             self.log("routing (" + [message.type, message.payload.type, message.seqnr].join(", ") + ") to " + nextHop.id().toString());
-            nextHop.route(to, message, callback);
+            nextHop.route(to, message, options, callback);
         }
     }
 };

@@ -25,23 +25,23 @@ var ChordNode = function(peer, chord, localNode) {
     return this;
 };
 
+ChordNode.message_types = {
+    FIND_SUCCESSOR: "FIND_SUCCESSOR",
+    FIND_PREDECESSOR: "FIND_PREDECESSOR",
+    PREDECESSOR: "PREDECESSOR",
+    NOTIFY: "NOTIFY",
+    ACK: "ACK",
+    PUT: "PUT",
+    GET: "GET",
+    ROUTE: "ROUTE",
+    ERROR: "ERROR"
+};
+
 ChordNode.prototype = {
 
     /**
      * Public API
      **/
-
-    message_types: {
-        FIND_SUCCESSOR: "FIND_SUCCESSOR",
-        FIND_PREDECESSOR: "FIND_PREDECESSOR",
-        PREDECESSOR: "PREDECESSOR",
-        NOTIFY: "NOTIFY",
-        ACK: "ACK",
-        PUT: "PUT",
-        GET: "GET",
-        ROUTE: "ROUTE",
-        ERROR: "ERROR"
-    },
 
     toString: function() {
         var succ_id = this.successor_id();
@@ -78,7 +78,7 @@ ChordNode.prototype = {
     find_predecessor: function(id, cb) {
         var self = this;
         this._send_request({
-            type: this.message_types.FIND_PREDECESSOR,
+            type: ChordNode.message_types.FIND_PREDECESSOR,
             id: id.toString()
         }, function(err, msg) {
             if (!err && msg && msg.res && msg.res.predecessor && msg.res.successor) {
@@ -95,7 +95,7 @@ ChordNode.prototype = {
     notify: function(id, cb) {
         var self = this;
         this._send_request({
-            type: this.message_types.NOTIFY,
+            type: ChordNode.message_types.NOTIFY,
             id: id.toString()
         }, function(err, msg) {
             cb(null, null);
@@ -116,7 +116,7 @@ ChordNode.prototype = {
 
     put: function(key, value, callback) {
         this._send_request({
-            type: this.message_types.PUT,
+            type: ChordNode.message_types.PUT,
             key: key.toString(),
             value: value
         }, function(err, msg) {
@@ -128,22 +128,31 @@ ChordNode.prototype = {
         var self = this;
         self.log("sending GET request");
         this._send_request({
-            type: this.message_types.GET,
+            type: ChordNode.message_types.GET,
             key: key.toString()
         }, function(err, msg) {
             callback(null, msg.value);
         });
     },
 
-    route: function(to, message, callback) {
+    route: function(to, message, options, callback) {
         var self = this;
-        this._send_request({
-            type: this.message_types.ROUTE,
+        if (!options || options.reliable === undefined) {
+            throw new Error("Wrong options: " + options);
+        }
+        var routeMsg = {
+            type: ChordNode.message_types.ROUTE,
             to: to.toString(),
-            payload: message
-        }, function(err, msg) {
-            callback(err);
-        });
+            payload: message,
+            options: options
+        };
+        if (options.reliable !== false) {
+            this._send_request(routeMsg, function(err, msg) {
+                callback(err);
+            });
+        } else {
+            this._send_request_unreliably(routeMsg);
+        }
     },
 
     store: function(key, value) {
@@ -175,7 +184,7 @@ ChordNode.prototype = {
         this._chord.find_predecessor(id, function(err, res) {
             if (!err) {
                 var msg = {
-                    type: self.message_types.PREDECESSOR,
+                    type: ChordNode.message_types.PREDECESSOR,
                     res: {
                         successor: res.successor.toString(),
                         predecessor: res.predecessor.toString()
@@ -185,7 +194,7 @@ ChordNode.prototype = {
                 self._send(msg);
             } else {
                 var errorMsg = {
-                    type: self.message_types.ERROR,
+                    type: ChordNode.message_types.ERROR,
                     error: err,
                     seqnr: seqnr
                 };
@@ -212,7 +221,7 @@ ChordNode.prototype = {
             self.log('not updating my predecessor');
         }
         self._send({
-            type: self.message_types.ACK,
+            type: ChordNode.message_types.ACK,
             seqnr: seqnr
         });
     },
@@ -221,7 +230,7 @@ ChordNode.prototype = {
         var self = this;
         this._chord.put(key, value, function(err) {
             var msg = {
-                type: self.message_types.ACK,
+                type: ChordNode.message_types.ACK,
                 seqnr: seqnr
             };
             self._send(msg);
@@ -232,7 +241,7 @@ ChordNode.prototype = {
         var self = this;
         this._chord.get(key, function(err, value) {
             var msg = {
-                type: self.message_types.ACK,
+                type: ChordNode.message_types.ACK,
                 value: value,
                 seqnr: seqnr
             };
@@ -243,17 +252,18 @@ ChordNode.prototype = {
     _route: function(msg) {
         var self = this;
         this._chord.route(new BigInteger(msg.to), msg.payload, function(err) {
+            // this callback is only invoked for reliable messages
             var resp = {
-                type: self.message_types.ACK,
+                type: ChordNode.message_types.ACK,
                 seqnr: msg.seqnr,
                 to: msg.from
             };
             if (err) {
-                resp.type = self.message_types.ERROR;
+                resp.type = ChordNode.message_types.ERROR;
                 resp.error = err;
             }
             self._send(resp);
-        });
+        }, msg.options);
     },
 
     _send_request: function(msg, cb) {
@@ -268,12 +278,17 @@ ChordNode.prototype = {
         this._send(msg);
     },
 
+    _send_request_unreliably: function(msg) {
+        this._send(msg);
+    },
+
     _send: function(msg) {
         msg.from = this._chord.id.toString();
         try {
             this._peer.send(msg);
         } catch (e) {
             this.log("Error sending", e);
+            throw new Error(e);
         }
     },
 
@@ -294,29 +309,29 @@ ChordNode.prototype = {
 
     _handle_request: function(msg) {
         var key;
-        if (typeof(msg.seqnr) === "undefined") {
-            return; // ignore message without sequence number
+        if (msg.options && msg.options.reliable && typeof(msg.seqnr) === "undefined") {
+            return; // ignore reliable message without sequence number
         }
         switch (msg.type) {
-            case this.message_types.ROUTE:
+            case ChordNode.message_types.ROUTE:
                 this._route(msg);
                 break;
-            case this.message_types.GET:
+            case ChordNode.message_types.GET:
                 key = new BigInteger(msg.key);
                 this._get(key, msg.seqnr);
                 break;
-            case this.message_types.PUT:
+            case ChordNode.message_types.PUT:
                 key = new BigInteger(msg.key);
                 this._put(key, msg.value, msg.seqnr);
                 break;
-            case this.message_types.FIND_SUCCESSOR:
+            case ChordNode.message_types.FIND_SUCCESSOR:
                 var i = new BigInteger(msg.id);
                 this._find_successor(i, msg.seqnr);
                 break;
-            case this.message_types.FIND_PREDECESSOR:
+            case ChordNode.message_types.FIND_PREDECESSOR:
                 this._find_predecessor(new BigInteger(msg.id), msg.seqnr);
                 break;
-            case this.message_types.NOTIFY:
+            case ChordNode.message_types.NOTIFY:
                 this._notify(new BigInteger(msg.id), msg.seqnr);
                 break;
             default:
