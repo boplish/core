@@ -23,7 +23,7 @@ describe('Sha1', function() {
             var i, digest, sha1 = new Sha1();
             sha1.update('max@example.org');
             digest = sha1.digest();
-            this.timeout(25);
+            this.timeout(50);
             for (i = 0; i < 10; i++) {
                 Sha1.bigInteger(digest);
             }
