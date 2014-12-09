@@ -4,6 +4,7 @@
 var bowser = require('bowser');
 var ConnectionManager = require('./connectionmanager.js');
 var Router = require('./chord/chord.js');
+var ChordNode = require('./chord/node.js');
 var BigInteger = require('./third_party/BigInteger.js');
 var BopURI = require('./bopuri.js');
 var Scribe = require('./scribe.js');
@@ -237,6 +238,10 @@ BOPlishClient.prototype = {
 
 BOPlishClient.BopURI = BopURI;
 BOPlishClient.config = config;
+BOPlishClient.setRTTEstimator = function(estimator) {
+    console.log("setting estimator to ", estimator);
+    ChordNode.RTTestimator = estimator;
+};
 
 if (typeof(module) !== 'undefined') {
     module.exports = BOPlishClient;

@@ -2,7 +2,7 @@ var BigInteger = require("../third_party/BigInteger.js");
 var Range = require("./range.js");
 var AverageRTTEstimator = require('./rttestimator.js');
 
-ChordNode = function(peer, chord, localNode) {
+var ChordNode = function(peer, chord, localNode) {
     if (!(this instanceof ChordNode)) {
         return new ChordNode(peer, chord, localNode);
     }
