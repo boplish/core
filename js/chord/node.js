@@ -1,6 +1,6 @@
 var BigInteger = require("../third_party/BigInteger.js");
 var Range = require("./range.js");
-var AverageRTTEstimator = require('./rttestimator.js');
+var RTTEstimator = require('./staticrttestimator.js');
 
 var ChordNode = function(peer, chord, localNode) {
     if (!(this instanceof ChordNode)) {
@@ -26,7 +26,7 @@ var ChordNode = function(peer, chord, localNode) {
     return this;
 };
 
-ChordNode.RTTestimator = AverageRTTEstimator;
+ChordNode.RTTestimator = RTTEstimator;
 
 ChordNode.message_types = {
     FIND_SUCCESSOR: "FIND_SUCCESSOR",
