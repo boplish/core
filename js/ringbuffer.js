@@ -1,5 +1,5 @@
 var RingBuffer = function(size) {
-    this._array = new Array(size);
+    this._array = [];
     this._size = size;
     this._curIdx = 0;
 };
@@ -12,6 +12,10 @@ RingBuffer.prototype = {
 
     get: function(idx) {
         return this._array[idx % this._size];
+    },
+
+    getall: function() {
+        return this._array.slice(0);
     }
 };
 
