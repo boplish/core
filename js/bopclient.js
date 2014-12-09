@@ -236,7 +236,6 @@ BOPlishClient.prototype = {
 };
 
 BOPlishClient.BopURI = BopURI;
-
 BOPlishClient.config = config;
 
 if (typeof(module) !== 'undefined') {
