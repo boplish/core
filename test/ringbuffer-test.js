@@ -3,6 +3,21 @@ var RingBuffer = require('../js/ringbuffer.js');
 
 describe('RingBuffer', function() {
     describe('constructor', function() {
+        it('should require size argument', function() {
+            (function() {
+                var rb = new RingBuffer();
+            }).should.throw();
+        });
+        it('should require size argument to be a number', function() {
+            (function() {
+                var rb = new RingBuffer("a");
+            }).should.throw();
+            (function() {
+                var rb = new RingBuffer({
+                    a: 1
+                });
+            }).should.throw();
+        });
         it('should return RingBuffer object', function() {
             var rb1, rb2;
             rb1 = new RingBuffer(1);

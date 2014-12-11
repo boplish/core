@@ -1,5 +1,5 @@
 var RingBuffer = function(size) {
-    if (size <= 0) {
+    if (typeof size !== 'number' || size <= 0) {
         throw new RangeError("RingBuffer size must be > 0");
     }
     if (!(this instanceof RingBuffer)) {
