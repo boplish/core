@@ -148,7 +148,13 @@ Chord.prototype._fix_fingers = function() {
                 if (err) {
                     return console.log('Error during fix_fingers:', err);
                 }
-                self._fingerTable[i].node = node;
+                node._peer.sendHeartbeat(function(err, msg) {
+                    if (err) {
+                        self._fingerTable[i].node = self._localNode;
+                    } else {
+                        self._fingerTable[i].node = node;
+                    }
+                });
             });
         }
     });
