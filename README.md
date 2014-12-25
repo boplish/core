@@ -11,10 +11,6 @@ connection maintenance and routing.
 For some demo applications using BOPlish refer to
     [https://github.com/boplish/demos/](https://github.com/boplish/demos/).
 
-**The code on this branch is deemed stable and doesn't change much. To gain
-insight into our latest development, have a look at the [develop
-branch](https://github.com/boplish/core/tree/develop).**
-
 Requirements
 ============
 
